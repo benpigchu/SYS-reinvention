@@ -1,9 +1,8 @@
-package reinventation_core
-
 import scala.util._
 import chisel3._
 import chisel3.iotesters
 import chisel3.iotesters.{ChiselFlatSpec, Driver, PeekPokeTester}
+import reinventation_core._
 
 class ALUTester(alu:ALU)extends PeekPokeTester(alu){
 	import ALUOp._
@@ -21,13 +20,12 @@ class ALUTester(alu:ALU)extends PeekPokeTester(alu){
 		SRA->((a:Int,b:Int)=>(a>>(b&31)))
 	)
 	for((op,func)<-ops){
-		val inputA=Random.nextInt()
-			val inputB=Random.nextInt()
-			poke(alu.io.op,op)
-			poke(alu.io.inputA,Integer.toUnsignedLong(inputA))
-			poke(alu.io.inputB,Integer.toUnsignedLong(inputB))
-			expect(alu.io.output,Integer.toUnsignedLong(func(inputA,inputB)))
-			step(1)
+		val inputA=rnd.nextInt()
+		val inputB=rnd.nextInt()
+		poke(alu.io.op,op)
+		poke(alu.io.inputA,Integer.toUnsignedLong(inputA))
+		poke(alu.io.inputB,Integer.toUnsignedLong(inputB))
+		expect(alu.io.output,Integer.toUnsignedLong(func(inputA,inputB)))
 	}
 }
 
