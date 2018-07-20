@@ -3,21 +3,22 @@ package reinventation_core
 import chisel3._
 import chisel3.util._
 
-object ALUOp{//=(Rtype?inst[30]:'0')++inst[14:12]
-	val ADD="b0000".U(4.W)
-	val SLL="b0001".U(4.W)
-	val SLT="b0010".U(4.W)
-	val SLTU="b0011".U(4.W)
-	val XOR="b0100".U(4.W)
-	val SRL="b0101".U(4.W)
-	val OR="b0110".U(4.W)
-	val AND="b0111".U(4.W)
-	val SUB="b1000".U(4.W)
-	val SRA="b1100".U(4.W)
+object ALUOp{//=(Rtype?inst[30]:'0')++inst[14:12],but we do not do this
+	val width=4.W
+	val OP_ADD="b0000".U(width)
+	val OP_SLL="b0001".U(width)
+	val OP_SLT="b0010".U(width)
+	val OP_SLTU="b0011".U(width)
+	val OP_XOR="b0100".U(width)
+	val OP_SRL="b0101".U(width)
+	val OP_OR="b0110".U(width)
+	val OP_AND="b0111".U(width)
+	val OP_SUB="b1000".U(width)
+	val OP_SRA="b1100".U(width)
 }
 
 class ALUIO extends Bundle{
-	val op=Input(UInt(4.W))
+	val op=Input(UInt(ALUOp.width))
 	val inputA=Input(UInt(32.W))
 	val inputB=Input(UInt(32.W))
 	val output=Output(UInt(32.W))
@@ -29,15 +30,15 @@ class ALU extends Module{
 	val a=io.inputA
 	val b=io.inputB
 	io.output:=MuxLookup(io.op,0.U(32.W),Seq(
-		ADD->(a+b),
-		SLL->(a<<b(4,0)),
-		SLT->Mux(a.asSInt<b.asSInt,1.U,0.U),
-		SLTU->Mux(a<b,1.U,0.U),
-		XOR->(a^b),
-		SRL->(a>>b(4,0)),
-		OR->(a|b),
-		AND->(a&b),
-		SUB->(a-b),
-		SRA->((a.asSInt>>b(4,0)).asUInt)
+		OP_ADD->(a+b),
+		OP_SLL->(a<<b(4,0)),
+		OP_SLT->Mux(a.asSInt<b.asSInt,1.U,0.U),
+		OP_SLTU->Mux(a<b,1.U,0.U),
+		OP_XOR->(a^b),
+		OP_SRL->(a>>b(4,0)),
+		OP_OR->(a|b),
+		OP_AND->(a&b),
+		OP_SUB->(a-b),
+		OP_SRA->((a.asSInt>>b(4,0)).asUInt)
 	))
 }
