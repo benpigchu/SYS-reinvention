@@ -11,6 +11,7 @@ class RegFileIO extends Bundle{
 	val writeData=Input(UInt(32.W))
 	val readDataA=Output(UInt(32.W))
 	val readDataB=Output(UInt(32.W))
+	val debug=Output(Vec(32,UInt(32.W)))
 }
 
 class RegFile extends Module{
@@ -20,5 +21,8 @@ class RegFile extends Module{
 	io.readDataB:=Mux(io.readRegB=/=0.U,Mux(io.writeEnable&(io.readRegB===io.writeReg),io.writeData,regs(io.readRegB)),0.U)
 	when(io.writeEnable&(io.writeReg=/=0.U)){
 		regs(io.writeReg):=io.writeData
+	}
+	for(i<-0 until 32){
+		io.debug(i):=regs(i)
 	}
 }

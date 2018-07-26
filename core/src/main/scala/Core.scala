@@ -1,36 +1,49 @@
 package reinventation_core
 
 import chisel3._
+import chisel3.util._
 
 class MemIO extends Bundle{
-	val request=Output(Bool())
 	val ready=Input(Bool())
 	val iaddr=Output(UInt(34.W))
 	val idata=Input(UInt(32.W))
-	val read=Output(Bool())
-	val write=Output(Bool())
-	val rwaddr=Output(UInt(34.W))
-	val rdata=Input(UInt(32.W))
-	val wdata=Output(UInt(32.W))
-	val rwtype=Output(UInt(3.W))
+	// val read=Output(Bool())
+	// val write=Output(Bool())
+	// val rwaddr=Output(UInt(34.W))
+	// val rdata=Input(UInt(32.W))
+	// val wdata=Output(UInt(32.W))
+	// val rwtype=Output(UInt(3.W))
+}
+
+class DebugIO extends Bundle{
+	val regs=Output(Vec(32,UInt(32.W)))
 }
 
 class CoreIO extends Bundle{
 	val mem=new MemIO
+	val debug=new DebugIO
 }
 
 class Core extends Module{
 	val NOP="b00000000000000000000000000010011".U(32.W)
 	val io=IO(new CoreIO)
 	//-------Declares
-	//-------PC
-	val pc=RegInit(0.U(32.W))
-	val pcStall=False.B//TODO
-	val nextPc=Mux(pcStall,pc,pc+4.U)
+	//should we stall and keep the status in this stage?
+	val pcStall=Wire(Bool())
+	val idStall=Wire(Bool())
+	val exStall=Wire(Bool())
+	val meStall=Wire(Bool())
+	val wbStall=Wire(Bool())
 	//-------IF
+	val pc=RegInit(0.U(32.W))
+	pcStall:=(!io.mem.ready)|idStall
+	val nextPc=Mux(pcStall,pc,pc+4.U)
+	pc:=nextPc
 	io.mem.iaddr:=Cat(0.U(2.W),pc)//we do not have mmu now
 	//-------ID
-	val idStall=False.B//TODO
+	idStall:=exStall//TODO
+	val idInvalid=RegInit(false.B)
+	idInvalid:=pcStall&(!idStall)
 	val idInst=RegInit(NOP)
 	idInst:=Mux(idStall,idInst,io.mem.idata)
 	val idPc=RegInit(0.U(32.W))
@@ -45,7 +58,9 @@ class Core extends Module{
 	regfile.io.readRegA:=idRegA
 	regfile.io.readRegB:=idRegB
 	//-------EX
-	val exStall=False.B//TODO
+	exStall:=meStall//TODO
+	val exInvalid=RegInit(false.B)
+	exInvalid:=(idStall&(!exStall))|idInvalid
 	val exPc=RegInit(0.U(32.W))
 	exPc:=Mux(exStall,exPc,idPc)
 	val exInst=RegInit(NOP)
@@ -71,7 +86,9 @@ class Core extends Module{
 		B_IMM->exImm
 	))
 	//-------ME
-	val meStall=False.B//TODO
+	meStall:=wbStall//TODO
+	val meInvalid=RegInit(false.B)
+	meInvalid:=(exStall&(!meStall))|exInvalid
 	val mePc=RegInit(0.U(32.W))
 	mePc:=Mux(meStall,mePc,exPc)
 	val meInst=RegInit(NOP)
@@ -88,7 +105,9 @@ class Core extends Module{
 	meALUResult:=Mux(meStall,meALUResult,alu.io.output)
 	//current nothing
 	//-------WB
-	val wbStall=False.B//TODO
+	wbStall:=false.B//TODO
+	val wbInvalid=RegInit(false.B)
+	wbInvalid:=(meStall&(!wbStall))|meInvalid
 	val wbPc=RegInit(0.U(32.W))
 	wbPc:=Mux(wbStall,wbPc,mePc)
 	val wbInst=RegInit(NOP)
@@ -103,10 +122,16 @@ class Core extends Module{
 	wbDataB:=Mux(wbStall,wbDataB,meDataB)
 	val wbALUResult=RegInit(0.U(32.W))
 	wbALUResult:=Mux(wbStall,wbALUResult,meALUResult)
-	regfile.io.writeEnable:=wbSignal.writeBack
+	regfile.io.writeEnable:=wbSignal.writeBack&(!wbInvalid)
 	val wbRegDest=wbInst(11,7)
 	regfile.io.writeReg:=wbRegDest
 	val wbRegData=wbALUResult
 	regfile.io.writeData:=wbRegData
 	//-------Control
+	//-------Debug
+	io.debug.regs:=regfile.io.debug
+	printf("----------------\n")
+	printf(p"stall: pc=$pcStall id=$idStall ex=$exStall me=$meStall wb=$wbStall\n")
+	printf(p"invalid: id=$idInvalid ex=$exInvalid me=$meInvalid wb=$wbInvalid\n")
+	printf(p"pc: pc=0x${Hexadecimal(pc)} id=0x${Hexadecimal(idPc)} ex=0x${Hexadecimal(exPc)} me=0x${Hexadecimal(mePc)} wb=0x${Hexadecimal(wbPc)}\n")
 }
