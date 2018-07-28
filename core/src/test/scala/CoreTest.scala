@@ -4,52 +4,78 @@ import chisel3.iotesters
 import chisel3.iotesters.{ChiselFlatSpec, Driver, PeekPokeTester}
 import reinventation_core._
 
-class CoreTester(core:Core)extends PeekPokeTester(core){
+class CoreTesterBase(core:Core)extends PeekPokeTester(core){
 	//we use only the lower half bits, why we can not have unsigned number in jvm?
-	val mem=ArrayBuffer.fill[Short](0x800000)(0)
+	protected val mem=ArrayBuffer.fill[Short](0x800000)(0)
 	//init mem
-	private def getByte(address:Long):Short={
+	protected def getByte(address:Long):Short={
 		val addr=address%0x3FFFFFFFFL
 		if(address<0||address>mem.length){
 			return 0
 		}
 		mem(address)
 	}
-	private def setByte(address:Long,data:Short)={
+	protected def setByte(address:Long,data:Short)={
 		val addr=address%0x3FFFFFFFFL
 		if(!(address<0||address>mem.length)){
 			mem(address)=data
 		}
 	}
-	private def getHalf(address:Long):Int={
+	protected def getHalf(address:Long):Int={
 		(getByte(address+1).intValue<<8)+getByte(address).intValue
 	}
-	private def setHalf(address:Long,data:Int)={
+	protected def setHalf(address:Long,data:Int)={
 		setByte(address,(data&0xFF).shortValue)
 		setByte(address+1,((data>>8)&0xFF).shortValue)
 	}
-	private def getWord(address:Long):Long={
+	protected def getWord(address:Long):Long={
 		(getHalf(address+2).longValue<<16)+getHalf(address).longValue
 	}
-	private def setWord(address:Long,data:Long)={
+	protected def setWord(address:Long,data:Long)={
 		setHalf(address,(data&0xFFFF).intValue)
 		setHalf(address+2,((data>>16)&0xFFFF).intValue)
 	}
-	setWord(0,java.lang.Long.parseLong("00000000001100000000111110010011",2))
-	for(i<-1 until 10){
-		setWord(4*i,java.lang.Long.parseLong("00000000000000000000000000010011",2))
+	protected def loadInst(insts:Iterable[Long])={
+		for((inst,id) <- insts.zipWithIndex){
+			setWord(id*4,inst)
+		}
 	}
-	for(i<-0 until 5){
+	protected def stepStage()={
 		poke(core.io.mem.ready,false)
 		val iaddr=peek(core.io.mem.iaddr).longValue
-		poke(core.io.mem.idata,getWord(iaddr))//NOP
+		poke(core.io.mem.idata,getWord(iaddr))
 		poke(core.io.mem.ready,true)
 		step(1)
 	}
-	expect(core.io.debug.regs(31),3)
 }
 
-class CoreTest extends ChiselFlatSpec{
+class BasicCoreTester(core:Core) extends CoreTesterBase(core){
+	import InstGen._
+	val insts=Seq(
+		ADDI(31,0,3),
+		AUIPC(5,2L<<12),
+		LUI(15,1L<<12),
+		NOP,
+		NOP,
+		NOP,
+		NOP,
+		ADD(7,31,31),
+		NOP,
+		NOP,
+		NOP,
+		NOP
+	)
+	loadInst(insts)
+	for(i<-0 until 12){
+		stepStage()
+	}
+	expect(core.io.debug.regs(31),3)
+	expect(core.io.debug.regs(15),1L<<12)
+	expect(core.io.debug.regs(7),6)
+	expect(core.io.debug.regs(5),(2L<<12)+4)
+}
+
+class BasicCoreTest extends ChiselFlatSpec{
 	"Core" should "works" in {
 		iotesters.Driver.execute(Array("--is-verbose"),()=>new Core){
 			c=>new CoreTester(c)
