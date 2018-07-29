@@ -40,7 +40,12 @@ object DecodeData{
 	import MemWidthSignal._
 	import WritebackSourceSignal._
 	import InstructionPatterns._
-	// List(legal,useRegA,useRegB,immType,aluOp,aluASource,aluBSource,accessMem,memOp,memWidth,memLoadUnsigned,writeBack,writeBackSource)
+	//               legal
+	//               | useRegA           aluASource              memWidth
+	//               | | useRegB         |      aluBSource       |   memLoadUnsigned
+	//               | | | immType 	     |      |      accessMem |   | writeBack
+	//               | | | |	  aluOp  |      |      | memOp   |   | | writeBackSource
+	//               | | | |	  |      |      |      | |       |   | | |
 	val default=List(F,F,F,IMM_X,OP_X   ,A_X   ,B_X   ,F,M_X    ,W_X,X,X,WB_X  )
 	val table=Array(
 		//--------Integer Computation
@@ -71,9 +76,9 @@ object DecodeData{
 		LW    ->List(T,T,F,IMM_I,OP_ADD ,A_REGA,B_IMM ,T,M_LOAD ,W_W,F,T,WB_MEM),
 		LBU   ->List(T,T,F,IMM_I,OP_ADD ,A_REGA,B_IMM ,T,M_LOAD ,W_B,T,T,WB_MEM),
 		LHU   ->List(T,T,F,IMM_I,OP_ADD ,A_REGA,B_IMM ,T,M_LOAD ,W_H,T,T,WB_MEM),
-		SB    ->List(T,T,F,IMM_S,OP_ADD ,A_REGA,B_IMM ,T,M_STORE,W_B,X,F,WB_X  ),
-		SH    ->List(T,T,F,IMM_S,OP_ADD ,A_REGA,B_IMM ,T,M_STORE,W_H,X,F,WB_X  ),
-		SW    ->List(T,T,F,IMM_S,OP_ADD ,A_REGA,B_IMM ,T,M_STORE,W_W,X,F,WB_X  )
+		SB    ->List(T,T,T,IMM_S,OP_ADD ,A_REGA,B_IMM ,T,M_STORE,W_B,X,F,WB_X  ),
+		SH    ->List(T,T,T,IMM_S,OP_ADD ,A_REGA,B_IMM ,T,M_STORE,W_H,X,F,WB_X  ),
+		SW    ->List(T,T,T,IMM_S,OP_ADD ,A_REGA,B_IMM ,T,M_STORE,W_W,X,F,WB_X  )
 	)
 }
 

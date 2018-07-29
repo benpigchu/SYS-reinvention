@@ -28,6 +28,35 @@ class Core extends Module{
 	val NOP="b00000000000000000000000000010011".U(32.W)
 	val io=IO(new CoreIO)
 	//-------Declares
+	//regs
+	val pc=RegInit(0.U(32.W))
+	val idInvalid=RegInit(false.B)
+	val idInst=RegInit(NOP)
+	val idPc=RegInit(0.U(32.W))
+	val exInvalid=RegInit(false.B)
+	val exPc=RegInit(0.U(32.W))
+	val exInst=RegInit(NOP)
+	val exImm=RegInit(0.U(32.W))
+	val exSignal=RegInit(0.U.asTypeOf(new ControlSignals))
+	val exRawDataA=RegInit(0.U(32.W))
+	val exRawDataB=RegInit(0.U(32.W))
+	val meInvalid=RegInit(false.B)
+	val mePc=RegInit(0.U(32.W))
+	val meInst=RegInit(NOP)
+	val meImm=RegInit(0.U(32.W))
+	val meSignal=RegInit(0.U.asTypeOf(new ControlSignals))
+	val meDataA=RegInit(0.U(32.W))
+	val meDataB=RegInit(0.U(32.W))
+	val meALUResult=RegInit(0.U(32.W))
+	val wbInvalid=RegInit(false.B)
+	val wbPc=RegInit(0.U(32.W))
+	val wbInst=RegInit(NOP)
+	val wbImm=RegInit(0.U(32.W))
+	val wbSignal=RegInit(0.U.asTypeOf(new ControlSignals))
+	val wbDataA=RegInit(0.U(32.W))
+	val wbDataB=RegInit(0.U(32.W))
+	val wbALUResult=RegInit(0.U(32.W))
+	val wbLoadedData=RegInit(0.U(32.W))
 	//should we stall and keep the status in this stage?
 	val pcStall=Wire(Bool())
 	val idStall=Wire(Bool())
@@ -35,18 +64,14 @@ class Core extends Module{
 	val meStall=Wire(Bool())
 	val wbStall=Wire(Bool())
 	//-------IF
-	val pc=RegInit(0.U(32.W))
 	pcStall:=idStall
 	val nextPc=Mux(pcStall,pc,pc+4.U)
 	pc:=nextPc
 	io.mem.iaddr:=Cat(0.U(2.W),pc)//we do not have mmu now
 	//-------ID
 	idStall:=exStall//TODO
-	val idInvalid=RegInit(false.B)
 	idInvalid:=pcStall&(!idStall)
-	val idInst=RegInit(NOP)
 	idInst:=Mux(idStall,idInst,io.mem.idata)
-	val idPc=RegInit(0.U(32.W))
 	idPc:=Mux(idStall,idPc,pc)
 	val idRegA=idInst(19,15)
 	val idRegB=idInst(24,20)
@@ -59,21 +84,19 @@ class Core extends Module{
 	regfile.io.readRegB:=idRegB
 	//-------EX
 	//also calculate address for me
-	exStall:=meStall//TODO
-	val exInvalid=RegInit(false.B)
+	val useAfterLoadHazard=Wire(Bool())
+	exStall:=meStall|useAfterLoadHazard//TODO
 	exInvalid:=(idStall&(!exStall))|idInvalid
-	val exPc=RegInit(0.U(32.W))
 	exPc:=Mux(exStall,exPc,idPc)
-	val exInst=RegInit(NOP)
 	exInst:=Mux(exStall,exInst,idInst)
-	val exImm=RegInit(0.U(32.W))
 	exImm:=Mux(exStall,exImm,idImm)
-	val exSignal=RegInit(0.U.asTypeOf(new ControlSignals))
 	exSignal:=Mux(exStall,exSignal,idSignal)
-	val exDataA=RegInit(0.U(32.W))
-	exDataA:=Mux(exStall,exDataA,regfile.io.readDataA)
-	val exDataB=RegInit(0.U(32.W))
-	exDataB:=Mux(exStall,exDataB,regfile.io.readDataB)
+	exRawDataA:=Mux(exStall,exRawDataA,regfile.io.readDataA)
+	exRawDataB:=Mux(exStall,exRawDataB,regfile.io.readDataB)
+	val exRegA=exInst(19,15)
+	val exRegB=exInst(24,20)
+	val exDataA=Wire(UInt(32.W))
+	val exDataB=Wire(UInt(32.W))
 	val alu=Module(new ALU)
 	alu.io.op:=exSignal.aluOp
 	import ALUASourceSignal._
@@ -88,24 +111,17 @@ class Core extends Module{
 	))
 	//-------ME
 	meStall:=wbStall//TODO
-	val meInvalid=RegInit(false.B)
 	meInvalid:=(exStall&(!meStall))|exInvalid
-	val mePc=RegInit(0.U(32.W))
 	mePc:=Mux(meStall,mePc,exPc)
-	val meInst=RegInit(NOP)
 	meInst:=Mux(meStall,meInst,exInst)
-	val meImm=RegInit(0.U(32.W))
 	meImm:=Mux(meStall,meImm,exImm)
-	val meSignal=RegInit(0.U.asTypeOf(new ControlSignals))
 	meSignal:=Mux(meStall,meSignal,exSignal)
-	val meDataA=RegInit(0.U(32.W))
 	meDataA:=Mux(meStall,meDataA,exDataA)
-	val meDataB=RegInit(0.U(32.W))
 	meDataB:=Mux(meStall,meDataB,exDataB)
-	val meALUResult=RegInit(0.U(32.W))
 	meALUResult:=Mux(meStall,meALUResult,alu.io.output)
-	printf(p"----[me] inst ${Binary(meInst)} access ${meSignal.accessMem} type ${meSignal.memOp}")
-	printf(p"----[me] imm ${Binary(meImm)}")
+	val meRegDest=meInst(11,7)
+	printf(p"----[me] inst ${Binary(meInst)} access ${meSignal.accessMem} type ${meSignal.memOp}\n")
+	printf(p"----[me] imm ${Binary(meImm)}\n")
 	io.mem.access:=(!meInvalid)&meSignal.accessMem
 	io.mem.rwtype:=meSignal.memOp
 	io.mem.rwaddr:=meALUResult
@@ -120,23 +136,14 @@ class Core extends Module{
 	))
 	//-------WB
 	wbStall:=(!io.mem.ready)//currently we block the whole pipeline when io is not ready
-	val wbInvalid=RegInit(false.B)
 	wbInvalid:=(meStall&(!wbStall))|meInvalid
-	val wbPc=RegInit(0.U(32.W))
 	wbPc:=Mux(wbStall,wbPc,mePc)
-	val wbInst=RegInit(NOP)
 	wbInst:=Mux(wbStall,wbInst,meInst)
-	val wbImm=RegInit(0.U(32.W))
 	wbImm:=Mux(wbStall,wbImm,meImm)
-	val wbSignal=RegInit(0.U.asTypeOf(new ControlSignals))
 	wbSignal:=Mux(wbStall,wbSignal,meSignal)
-	val wbDataA=RegInit(0.U(32.W))
 	wbDataA:=Mux(wbStall,wbDataA,meDataA)
-	val wbDataB=RegInit(0.U(32.W))
 	wbDataB:=Mux(wbStall,wbDataB,meDataB)
-	val wbALUResult=RegInit(0.U(32.W))
 	wbALUResult:=Mux(wbStall,wbALUResult,meALUResult)
-	val wbLoadedData=RegInit(0.U(32.W))
 	wbLoadedData:=Mux(wbStall,wbLoadedData,meLoadedData)
 	regfile.io.writeEnable:=wbSignal.writeBack&(!wbInvalid)
 	val wbRegDest=wbInst(11,7)
@@ -147,7 +154,20 @@ class Core extends Module{
 		WB_MEM->wbLoadedData
 	))
 	regfile.io.writeData:=wbRegData
-	//-------Control
+	//-------Forward+Hazard
+	val exNeedMeForwardA=exSignal.useRegA&(!meInvalid)&meSignal.writeBack&(meRegDest===exRegA)&(!meSignal.accessMem)
+	val exNeedMeForwardB=exSignal.useRegB&(!meInvalid)&meSignal.writeBack&(meRegDest===exRegB)&(!meSignal.accessMem)
+	val exNeedWbForwardA=exSignal.useRegA&(!wbInvalid)&wbSignal.writeBack&(wbRegDest===exRegA)
+	val exNeedWbForwardB=exSignal.useRegB&(!wbInvalid)&wbSignal.writeBack&(wbRegDest===exRegB)
+	exDataA:=Mux(exNeedMeForwardA,meALUResult,Mux(exNeedWbForwardA,wbRegData,exRawDataA))
+	exDataB:=Mux(exNeedMeForwardB,meALUResult,Mux(exNeedWbForwardB,wbRegData,exRawDataB))
+	printf(p"----[forword] regA:$exRegA dataA:${Hexadecimal(exDataA)} use:${exSignal.useRegA}\n")
+	printf(p"----[forword] regB:$exRegA dataB:${Hexadecimal(exDataB)} use:${exSignal.useRegB}\n")
+	printf(p"----[forword] me:$meRegDest dataB:${Hexadecimal(meALUResult)} use:${meSignal.writeBack}\n")
+	printf(p"----[forword] wb:$wbRegDest dataB:${Hexadecimal(wbRegData)} use:${wbSignal.writeBack}\n")
+	val useAfterLoadHazardA=exSignal.useRegA&(!meInvalid)&meSignal.writeBack&(meRegDest===exRegA)&(meSignal.accessMem)
+	val useAfterLoadHazardB=exSignal.useRegA&(!meInvalid)&meSignal.writeBack&(meRegDest===exRegA)&(meSignal.accessMem)
+	useAfterLoadHazard:=useAfterLoadHazardA|useAfterLoadHazardB
 	//-------Debug
 	io.debug.regs:=regfile.io.debug
 	printf("----------------\n")
