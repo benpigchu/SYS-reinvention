@@ -13,12 +13,12 @@ class CoreTesterBase(core:Core)extends PeekPokeTester(core){
 		if(address<0||address>mem.length){
 			return 0
 		}
-		mem(address)
+		(mem(address)&(0xFF.shortValue)).shortValue
 	}
 	protected def setByte(address:Long,data:Short)={
 		val addr=address%0x3FFFFFFFFL
 		if(!(address<0||address>mem.length)){
-			mem(address)=data
+			mem(address)=(data&(0xFF.shortValue)).shortValue
 		}
 	}
 	protected def getHalf(address:Long):Int={
@@ -36,49 +36,55 @@ class CoreTesterBase(core:Core)extends PeekPokeTester(core){
 		setHalf(address+2,((data>>16)&0xFFFF).intValue)
 	}
 	protected def loadInst(insts:Iterable[Long])={
-		for((inst,id) <- insts.zipWithIndex){
+		for((inst,id)<- insts.zipWithIndex){
 			setWord(id*4,inst)
 		}
 	}
 	protected def stepStage()={
 		poke(core.io.mem.ready,false)
 		val iaddr=peek(core.io.mem.iaddr).longValue
+		val access=peek(core.io.mem.access).longValue
+		if(access>0){
+			step(1)
+			val rwtype=peek(core.io.mem.rwtype).longValue
+			val rwaddr=peek(core.io.mem.rwaddr).longValue
+			val rwwidth=peek(core.io.mem.rwwidth).longValue
+			rwtype match{
+				case 0=>{//load
+					val rdata=rwwidth match{
+						case 0=>getByte(rwaddr).longValue
+						case 1=>getHalf(rwaddr).longValue
+						case 2=>getWord(rwaddr).longValue
+					}
+					println(f"----[#load]from 0x$rwaddr%x get 0x$rdata%x (width: ' $rwwidth%x ')")
+					poke(core.io.mem.rdata,rdata)
+				}
+				case 1=>{//store
+					val wdata=peek(core.io.mem.wdata)
+					println(f"----[#store]to 0x$rwaddr%x set 0x$wdata%x (width: ' $rwwidth%x ')")
+					rwwidth match{
+						case 0=>setByte(rwaddr,wdata.shortValue)
+						case 1=>setHalf(rwaddr,wdata.intValue)
+						case 2=>setWord(rwaddr,wdata.longValue)
+					}
+				}
+			}
+		}
 		poke(core.io.mem.idata,getWord(iaddr))
 		poke(core.io.mem.ready,true)
 		step(1)
 	}
-}
-
-class BasicCoreTester(core:Core) extends CoreTesterBase(core){
-	import InstGen._
-	val insts=Seq(
-		ADDI(31,0,3),
-		AUIPC(5,2L<<12),
-		LUI(15,1L<<12),
-		NOP,
-		NOP,
-		NOP,
-		NOP,
-		ADD(7,31,31),
-		NOP,
-		NOP,
-		NOP,
-		NOP
-	)
-	loadInst(insts)
-	for(i<-0 until 12){
-		stepStage()
+	protected def stepStages(times:Int=1)={
+		for(i<-0 until times){
+			stepStage()
+		}
 	}
-	expect(core.io.debug.regs(31),3)
-	expect(core.io.debug.regs(15),1L<<12)
-	expect(core.io.debug.regs(7),6)
-	expect(core.io.debug.regs(5),(2L<<12)+4)
 }
 
-class BasicCoreTest extends ChiselFlatSpec{
+class CoreTestBase(coreTesterGen:(Core)=>CoreTesterBase) extends ChiselFlatSpec{
 	"Core" should "works" in {
 		iotesters.Driver.execute(Array("--is-verbose"),()=>new Core){
-			c=>new CoreTester(c)
+			coreTesterGen
 		}should be(true)
 	}
 }

@@ -4,6 +4,8 @@ object InstGen{
 		val AUIPC=0x17L
 		val OP_IMM=0x13L
 		val OP=0x33L
+		val LOAD=0x3L
+		val STORE=0x23L
 	}
 	private object Funct3{
 		val ADD=0x0L
@@ -16,6 +18,14 @@ object InstGen{
 		val SRA=0x5L
 		val OR=0x6L
 		val AND=0x7L
+		val LB=0x0L
+		val SB=0x0L
+		val LH=0x1L
+		val SH=0x1L
+		val LW=0x2L
+		val SW=0x2L
+		val LBU=0x4L
+		val LHU=0x5L
 	}
 	private def addPart(origin:Long,value:Long,left:Long,right:Long=0L)={
 		val width=left-right
@@ -48,6 +58,16 @@ object InstGen{
 		inst=addPart(inst,opcode,7)
 		inst
 	}
+	private def S(rs1:Long,rs2:Long,imm:Long,funct3:Long,opcode:Long)={
+		var inst:Long=0
+		inst=addPart(inst,imm,12,5)
+		inst=addPart(inst,rs2,5)
+		inst=addPart(inst,rs1,5)
+		inst=addPart(inst,funct3,3)
+		inst=addPart(inst,imm,5,0)
+		inst=addPart(inst,opcode,7)
+		inst
+	}
 	def LUI(rd:Long,imm:Long)=U(rd,imm,Opcode.LUI)
 	def AUIPC(rd:Long,imm:Long)=U(rd,imm,Opcode.AUIPC)
 	def ADDI(rd:Long,rs1:Long,imm:Long)=I(rd,rs1,imm,Funct3.ADD,Opcode.OP_IMM)
@@ -69,5 +89,13 @@ object InstGen{
 	def SLL(rd:Long,rs1:Long,rs2:Long)=R(rd,rs1,rs2,0x0L,Funct3.SLL,Opcode.OP)
 	def SRL(rd:Long,rs1:Long,rs2:Long)=R(rd,rs1,rs2,0x0L,Funct3.SRL,Opcode.OP)
 	def SRA(rd:Long,rs1:Long,rs2:Long)=R(rd,rs1,rs2,0x20L,Funct3.SRA,Opcode.OP)
+	def LB(rd:Long,rs1:Long,imm:Long)=I(rd,rs1,imm,Funct3.LB,Opcode.LOAD)
+	def LH(rd:Long,rs1:Long,imm:Long)=I(rd,rs1,imm,Funct3.LH,Opcode.LOAD)
+	def LW(rd:Long,rs1:Long,imm:Long)=I(rd,rs1,imm,Funct3.LW,Opcode.LOAD)
+	def LBU(rd:Long,rs1:Long,imm:Long)=I(rd,rs1,imm,Funct3.LBU,Opcode.LOAD)
+	def LHU(rd:Long,rs1:Long,imm:Long)=I(rd,rs1,imm,Funct3.LHU,Opcode.LOAD)
+	def SB(rs1:Long,rs2:Long,imm:Long)=S(rs1,rs2,imm,Funct3.SB,Opcode.STORE)
+	def SH(rs1:Long,rs2:Long,imm:Long)=S(rs1,rs2,imm,Funct3.SH,Opcode.STORE)
+	def SW(rs1:Long,rs2:Long,imm:Long)=S(rs1,rs2,imm,Funct3.SW,Opcode.STORE)
 	def NOP=ADDI(0,0,0)
 }

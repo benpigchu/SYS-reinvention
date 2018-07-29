@@ -7,12 +7,12 @@ class MemIO extends Bundle{
 	val ready=Input(Bool())
 	val iaddr=Output(UInt(34.W))
 	val idata=Input(UInt(32.W))
-	// val read=Output(Bool())
-	// val write=Output(Bool())
-	// val rwaddr=Output(UInt(34.W))
-	// val rdata=Input(UInt(32.W))
-	// val wdata=Output(UInt(32.W))
-	// val rwtype=Output(UInt(3.W))
+	val access=Output(Bool())
+	val rwtype=Output(UInt(MemOpSignal.width))
+	val rwaddr=Output(UInt(34.W))
+	val rdata=Input(UInt(32.W))
+	val wdata=Output(UInt(32.W))
+	val rwwidth=Output(UInt(MemWidthSignal.width))
 }
 
 class DebugIO extends Bundle{
@@ -36,7 +36,7 @@ class Core extends Module{
 	val wbStall=Wire(Bool())
 	//-------IF
 	val pc=RegInit(0.U(32.W))
-	pcStall:=(!io.mem.ready)|idStall
+	pcStall:=idStall
 	val nextPc=Mux(pcStall,pc,pc+4.U)
 	pc:=nextPc
 	io.mem.iaddr:=Cat(0.U(2.W),pc)//we do not have mmu now
@@ -58,6 +58,7 @@ class Core extends Module{
 	regfile.io.readRegA:=idRegA
 	regfile.io.readRegB:=idRegB
 	//-------EX
+	//also calculate address for me
 	exStall:=meStall//TODO
 	val exInvalid=RegInit(false.B)
 	exInvalid:=(idStall&(!exStall))|idInvalid
@@ -103,9 +104,22 @@ class Core extends Module{
 	meDataB:=Mux(meStall,meDataB,exDataB)
 	val meALUResult=RegInit(0.U(32.W))
 	meALUResult:=Mux(meStall,meALUResult,alu.io.output)
-	//current nothing
+	printf(p"----[me] inst ${Binary(meInst)} access ${meSignal.accessMem} type ${meSignal.memOp}")
+	printf(p"----[me] imm ${Binary(meImm)}")
+	io.mem.access:=(!meInvalid)&meSignal.accessMem
+	io.mem.rwtype:=meSignal.memOp
+	io.mem.rwaddr:=meALUResult
+	io.mem.wdata:=meDataB
+	io.mem.rwwidth:=meSignal.memWidth
+	val meRawLoadedData=io.mem.rdata
+	import MemWidthSignal._
+	val meLoadedData=MuxLookup(meSignal.memWidth,0.U,Seq(
+		W_W->meRawLoadedData,
+		W_H->Cat(Fill(16,Mux(meSignal.memLoadUnsigned,0.U,meRawLoadedData(15))),meRawLoadedData(15,0)),
+		W_B->Cat(Fill(24,Mux(meSignal.memLoadUnsigned,0.U,meRawLoadedData(7))),meRawLoadedData(7,0))
+	))
 	//-------WB
-	wbStall:=false.B//TODO
+	wbStall:=(!io.mem.ready)//currently we block the whole pipeline when io is not ready
 	val wbInvalid=RegInit(false.B)
 	wbInvalid:=(meStall&(!wbStall))|meInvalid
 	val wbPc=RegInit(0.U(32.W))
@@ -122,10 +136,16 @@ class Core extends Module{
 	wbDataB:=Mux(wbStall,wbDataB,meDataB)
 	val wbALUResult=RegInit(0.U(32.W))
 	wbALUResult:=Mux(wbStall,wbALUResult,meALUResult)
+	val wbLoadedData=RegInit(0.U(32.W))
+	wbLoadedData:=Mux(wbStall,wbLoadedData,meLoadedData)
 	regfile.io.writeEnable:=wbSignal.writeBack&(!wbInvalid)
 	val wbRegDest=wbInst(11,7)
 	regfile.io.writeReg:=wbRegDest
-	val wbRegData=wbALUResult
+	import WritebackSourceSignal._
+	val wbRegData=MuxLookup(wbSignal.writeBackSource,wbALUResult,Seq(
+		WB_ALU->wbALUResult,
+		WB_MEM->wbLoadedData
+	))
 	regfile.io.writeData:=wbRegData
 	//-------Control
 	//-------Debug

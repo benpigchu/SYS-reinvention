@@ -15,6 +15,7 @@ object ALUOp{//=(Rtype?inst[30]:'0')++inst[14:12],but we do not do this
 	val OP_AND="b0111".U(width)
 	val OP_SUB="b1000".U(width)
 	val OP_SRA="b1100".U(width)
+	val OP_X="b1111".U(width)
 }
 
 class ALUIO extends Bundle{
