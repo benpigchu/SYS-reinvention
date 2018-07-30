@@ -155,10 +155,10 @@ class Core extends Module{
 	))
 	regfile.io.writeData:=wbRegData
 	//-------Forward+Hazard
-	val exNeedMeForwardA=exSignal.useRegA&(!meInvalid)&meSignal.writeBack&(meRegDest===exRegA)&(!meSignal.accessMem)
-	val exNeedMeForwardB=exSignal.useRegB&(!meInvalid)&meSignal.writeBack&(meRegDest===exRegB)&(!meSignal.accessMem)
-	val exNeedWbForwardA=exSignal.useRegA&(!wbInvalid)&wbSignal.writeBack&(wbRegDest===exRegA)
-	val exNeedWbForwardB=exSignal.useRegB&(!wbInvalid)&wbSignal.writeBack&(wbRegDest===exRegB)
+	val exNeedMeForwardA=exSignal.useRegA&(!meInvalid)&meSignal.writeBack&(meRegDest===exRegA)&(!meSignal.accessMem)&(exRegA=/=0.U)
+	val exNeedMeForwardB=exSignal.useRegB&(!meInvalid)&meSignal.writeBack&(meRegDest===exRegB)&(!meSignal.accessMem)&(exRegB=/=0.U)
+	val exNeedWbForwardA=exSignal.useRegA&(!wbInvalid)&wbSignal.writeBack&(wbRegDest===exRegA)&(exRegA=/=0.U)
+	val exNeedWbForwardB=exSignal.useRegB&(!wbInvalid)&wbSignal.writeBack&(wbRegDest===exRegB)&(exRegB=/=0.U)
 	exDataA:=Mux(exNeedMeForwardA,meALUResult,Mux(exNeedWbForwardA,wbRegData,exRawDataA))
 	exDataB:=Mux(exNeedMeForwardB,meALUResult,Mux(exNeedWbForwardB,wbRegData,exRawDataB))
 	printf(p"----[forword] regA:$exRegA dataA:${Hexadecimal(exDataA)} use:${exSignal.useRegA}\n")
@@ -170,8 +170,7 @@ class Core extends Module{
 	useAfterLoadHazard:=useAfterLoadHazardA|useAfterLoadHazardB
 	//-------Debug
 	io.debug.regs:=regfile.io.debug
-	printf("----------------\n")
-	printf(p"stall: pc=$pcStall id=$idStall ex=$exStall me=$meStall wb=$wbStall\n")
-	printf(p"invalid: id=$idInvalid ex=$exInvalid me=$meInvalid wb=$wbInvalid\n")
-	printf(p"pc: pc=0x${Hexadecimal(pc)} id=0x${Hexadecimal(idPc)} ex=0x${Hexadecimal(exPc)} me=0x${Hexadecimal(mePc)} wb=0x${Hexadecimal(wbPc)}\n")
+	printf(p"----[status] stall: pc=$pcStall id=$idStall ex=$exStall me=$meStall wb=$wbStall\n")
+	printf(p"----[status] invalid: id=$idInvalid ex=$exInvalid me=$meInvalid wb=$wbInvalid\n")
+	printf(p"----[status] pc: pc=0x${Hexadecimal(pc)} id=0x${Hexadecimal(idPc)} ex=0x${Hexadecimal(exPc)} me=0x${Hexadecimal(mePc)} wb=0x${Hexadecimal(wbPc)}\n")
 }
