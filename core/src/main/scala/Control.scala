@@ -89,12 +89,12 @@ object DecodeData{
 		//--------Jump and Branch
 		JAL   ->List(T,F,F,IMM_J,OP_ADD ,A_PC  ,B_IMM ,F,M_X    ,W_X,X,T,WB_PC4,T,F,F),
 		JALR  ->List(T,T,F,IMM_I,OP_ADD ,A_REGA,B_IMM ,F,M_X    ,W_X,X,T,WB_PC4,F,T,F),
-		BEQ   ->List(T,T,T,IMM_X,OP_SEQ ,A_REGA,B_REGB,F,M_X    ,W_X,X,F,WB_X  ,F,F,T),
-		BNE   ->List(T,T,T,IMM_X,OP_SNE ,A_REGA,B_REGB,F,M_X    ,W_X,X,F,WB_X  ,F,F,T),
-		BLT   ->List(T,T,T,IMM_X,OP_SLT ,A_REGA,B_REGB,F,M_X    ,W_X,X,F,WB_X  ,F,F,T),
-		BGE   ->List(T,T,T,IMM_X,OP_SGE ,A_REGA,B_REGB,F,M_X    ,W_X,X,F,WB_X  ,F,F,T),
-		BLTU  ->List(T,T,T,IMM_X,OP_SLTU,A_REGA,B_REGB,F,M_X    ,W_X,X,F,WB_X  ,F,F,T),
-		BGEU  ->List(T,T,T,IMM_X,OP_SGEU,A_REGA,B_REGB,F,M_X    ,W_X,X,F,WB_X  ,F,F,T)
+		BEQ   ->List(T,T,T,IMM_B,OP_SEQ ,A_REGA,B_REGB,F,M_X    ,W_X,X,F,WB_X  ,F,F,T),
+		BNE   ->List(T,T,T,IMM_B,OP_SNE ,A_REGA,B_REGB,F,M_X    ,W_X,X,F,WB_X  ,F,F,T),
+		BLT   ->List(T,T,T,IMM_B,OP_SLT ,A_REGA,B_REGB,F,M_X    ,W_X,X,F,WB_X  ,F,F,T),
+		BGE   ->List(T,T,T,IMM_B,OP_SGE ,A_REGA,B_REGB,F,M_X    ,W_X,X,F,WB_X  ,F,F,T),
+		BLTU  ->List(T,T,T,IMM_B,OP_SLTU,A_REGA,B_REGB,F,M_X    ,W_X,X,F,WB_X  ,F,F,T),
+		BGEU  ->List(T,T,T,IMM_B,OP_SGEU,A_REGA,B_REGB,F,M_X    ,W_X,X,F,WB_X  ,F,F,T)
 	)
 }
 

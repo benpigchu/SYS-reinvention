@@ -69,10 +69,12 @@ class Core extends Module{
 	val exBranchTarget=Wire(UInt(32.W))
 	val exPredictUnsuccess=Wire(Bool())
 	//-------IF
-	printf(p"----[branch] idExpectedBranch:$idExpectedBranch exPredictUnsuccess:$exPredictUnsuccess\n")
+	printf(p"----[branch] idExpectedBranch:$idExpectedBranch idExpectedTarget:0x${Hexadecimal(idExpectedTarget)}\n")
+	printf(p"----[branch] exPredictUnsuccess:$exPredictUnsuccess exBranchTarget:0x${Hexadecimal(exBranchTarget)}\n")
 	val stalledPcInvalid=idExpectedBranch|exPredictUnsuccess
 	pcStall:=(!io.mem.ready)|(idStall&(!stalledPcInvalid))
 	val nextPc=Mux(pcStall,pc,Mux(exPredictUnsuccess,exBranchTarget,Mux(idExpectedBranch,idExpectedTarget,pc+4.U)))
+	printf(p"----[pc] nextPc:0x${Hexadecimal(nextPc)}\n")
 	pc:=nextPc
 	io.mem.iaddr:=Cat(0.U(2.W),pc)//we do not have mmu now
 	//-------ID
@@ -99,7 +101,7 @@ class Core extends Module{
 	//also calculate jump target
 	val useAfterLoadHazard=Wire(Bool())
 	exStall:=meStall|useAfterLoadHazard//TODO
-	exInvalid:=(exStall&exInvalid)|(idStall&(!exStall))|idInvalid
+	exInvalid:=(exStall&exInvalid)|(idStall&(!exStall))|((!exStall)&exPredictUnsuccess)|idInvalid
 	exPc:=Mux(exStall,exPc,idPc)
 	exInst:=Mux(exStall,exInst,idInst)
 	exImm:=Mux(exStall,exImm,idImm)
@@ -126,7 +128,10 @@ class Core extends Module{
 	//for jar,always predicted correct
 	//for b,decide predict correctness with alu output
 	val exBranchSucess=(alu.io.output=/=0.U)
-	exBranchTarget:=Mux(exSignal.jalr,alu.io.output,Mux(exBranchSucess,idPc+idImm,idPc+4.U))
+	printf(p"----[tmp] alu.io.output:0x${Hexadecimal(alu.io.output)} exBranchSucess:$exBranchSucess\n")
+	printf(p"----[tmp] exPc:0x${Hexadecimal(exPc)} exImm:0x${Hexadecimal(exImm)}\n")
+	printf(p"----[tmp] inst:0x${Binary(exInst)}\n")
+	exBranchTarget:=Mux(exSignal.jalr,alu.io.output,Mux(exBranchSucess,exPc+exImm,exPc+4.U))
 	exPredictUnsuccess:=(!exInvalid)&(exSignal.jalr|(exSignal.branch&(exBranchSucess=/=exInst(31))))
 	//-------ME
 	meStall:=wbStall//TODO
