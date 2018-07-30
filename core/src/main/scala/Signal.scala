@@ -50,8 +50,9 @@ object MemWidthSignal{
 }
 
 object WritebackSourceSignal{
-	val width=1.W
+	val width=2.W
 	val WB_X=0.U(width)
 	val WB_ALU=0.U(width)
 	val WB_MEM=1.U(width)
+	val WB_PC4=3.U(width)
 }

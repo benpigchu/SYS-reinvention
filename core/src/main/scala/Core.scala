@@ -63,14 +63,21 @@ class Core extends Module{
 	val exStall=Wire(Bool())
 	val meStall=Wire(Bool())
 	val wbStall=Wire(Bool())
+	//branch predict related
+	val idExpectedTarget=Wire(UInt(32.W))
+	val idExpectedBranch=Wire(Bool())
+	val exBranchTarget=Wire(UInt(32.W))
+	val exPredictUnsuccess=Wire(Bool())
 	//-------IF
-	pcStall:=idStall
-	val nextPc=Mux(pcStall,pc,pc+4.U)
+	printf(p"----[branch] idExpectedBranch:$idExpectedBranch exPredictUnsuccess:$exPredictUnsuccess\n")
+	val stalledPcInvalid=idExpectedBranch|exPredictUnsuccess
+	pcStall:=(!io.mem.ready)|(idStall&(!stalledPcInvalid))
+	val nextPc=Mux(pcStall,pc,Mux(exPredictUnsuccess,exBranchTarget,Mux(idExpectedBranch,idExpectedTarget,pc+4.U)))
 	pc:=nextPc
 	io.mem.iaddr:=Cat(0.U(2.W),pc)//we do not have mmu now
 	//-------ID
 	idStall:=exStall//TODO
-	idInvalid:=pcStall&(!idStall)
+	idInvalid:=(idStall&idInvalid)|(pcStall&(!idStall))|((!idStall)&(idExpectedBranch|exPredictUnsuccess))
 	idInst:=Mux(idStall,idInst,io.mem.idata)
 	idPc:=Mux(idStall,idPc,pc)
 	val idRegA=idInst(19,15)
@@ -82,11 +89,17 @@ class Core extends Module{
 	val regfile=Module(new RegFile)
 	regfile.io.readRegA:=idRegA
 	regfile.io.readRegB:=idRegB
+	idExpectedTarget:=idPc+idImm
+	//for jalr,always wait to ex
+	//for jar,always predicted correct
+	//for b,expect success when jumping back(imm(31)==inst(31))
+	idExpectedBranch:=(!idInvalid)&(idSignal.jal|(idSignal.branch&idInst(31)))
 	//-------EX
 	//also calculate address for me
+	//also calculate jump target
 	val useAfterLoadHazard=Wire(Bool())
 	exStall:=meStall|useAfterLoadHazard//TODO
-	exInvalid:=(idStall&(!exStall))|idInvalid
+	exInvalid:=(exStall&exInvalid)|(idStall&(!exStall))|idInvalid
 	exPc:=Mux(exStall,exPc,idPc)
 	exInst:=Mux(exStall,exInst,idInst)
 	exImm:=Mux(exStall,exImm,idImm)
@@ -109,9 +122,15 @@ class Core extends Module{
 		B_REGB->exDataB,
 		B_IMM->exImm
 	))
+	//for jalr,use alu output,always predicted incorrect
+	//for jar,always predicted correct
+	//for b,decide predict correctness with alu output
+	val exBranchSucess=(alu.io.output=/=0.U)
+	exBranchTarget:=Mux(exSignal.jalr,alu.io.output,Mux(exBranchSucess,idPc+idImm,idPc+4.U))
+	exPredictUnsuccess:=(!exInvalid)&(exSignal.jalr|(exSignal.branch&(exBranchSucess=/=exInst(31))))
 	//-------ME
 	meStall:=wbStall//TODO
-	meInvalid:=(exStall&(!meStall))|exInvalid
+	meInvalid:=(meStall&meInvalid)|(exStall&(!meStall))|exInvalid
 	mePc:=Mux(meStall,mePc,exPc)
 	meInst:=Mux(meStall,meInst,exInst)
 	meImm:=Mux(meStall,meImm,exImm)
@@ -136,7 +155,7 @@ class Core extends Module{
 	))
 	//-------WB
 	wbStall:=(!io.mem.ready)//currently we block the whole pipeline when io is not ready
-	wbInvalid:=(meStall&(!wbStall))|meInvalid
+	wbInvalid:=(wbStall&wbInvalid)|(meStall&(!wbStall))|meInvalid
 	wbPc:=Mux(wbStall,wbPc,mePc)
 	wbInst:=Mux(wbStall,wbInst,meInst)
 	wbImm:=Mux(wbStall,wbImm,meImm)
@@ -151,7 +170,8 @@ class Core extends Module{
 	import WritebackSourceSignal._
 	val wbRegData=MuxLookup(wbSignal.writeBackSource,wbALUResult,Seq(
 		WB_ALU->wbALUResult,
-		WB_MEM->wbLoadedData
+		WB_MEM->wbLoadedData,
+		WB_PC4->(wbPc+4.U)
 	))
 	regfile.io.writeData:=wbRegData
 	//-------Forward+Hazard

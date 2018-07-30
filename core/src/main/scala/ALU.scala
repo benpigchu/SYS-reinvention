@@ -3,7 +3,7 @@ package reinventation_core
 import chisel3._
 import chisel3.util._
 
-object ALUOp{//=(Rtype?inst[30]:'0')++inst[14:12],but we do not do this
+object ALUOp{
 	val width=4.W
 	val OP_ADD="b0000".U(width)
 	val OP_SLL="b0001".U(width)
@@ -15,6 +15,10 @@ object ALUOp{//=(Rtype?inst[30]:'0')++inst[14:12],but we do not do this
 	val OP_AND="b0111".U(width)
 	val OP_SUB="b1000".U(width)
 	val OP_SRA="b1100".U(width)
+	val OP_SGE="b1010".U(width)
+	val OP_SGEU="b1011".U(width)
+	val OP_SEQ="b1001".U(width)
+	val OP_SNE="b1101".U(width)
 	val OP_X="b1111".U(width)
 }
 
@@ -40,6 +44,10 @@ class ALU extends Module{
 		OP_OR->(a|b),
 		OP_AND->(a&b),
 		OP_SUB->(a-b),
-		OP_SRA->((a.asSInt>>b(4,0)).asUInt)
+		OP_SRA->((a.asSInt>>b(4,0)).asUInt),
+		OP_SGE->Mux(a.asSInt>b.asSInt,1.U,0.U),
+		OP_SGEU->Mux(a>b,1.U,0.U),
+		OP_SEQ->Mux(a===b,1.U,0.U),
+		OP_SNE->Mux(a=/=b,1.U,0.U)
 	))
 }
