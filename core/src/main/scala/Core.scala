@@ -78,7 +78,8 @@ class Core extends Module{
 	pc:=nextPc
 	io.mem.iaddr:=Cat(0.U(2.W),pc)//we do not have mmu now
 	//-------ID
-	idStall:=exStall//TODO
+	val haveMemWriteToDo=Wire(Bool())
+	idStall:=exStall|((!idInvalid)&haveMemWriteToDo)//TODO
 	idInvalid:=(idStall&idInvalid)|(pcStall&(!idStall))|((!idStall)&(idExpectedBranch|exPredictUnsuccess))
 	idInst:=Mux(idStall,idInst,io.mem.idata)
 	idPc:=Mux(idStall,idPc,pc)
@@ -128,9 +129,9 @@ class Core extends Module{
 	//for jar,always predicted correct
 	//for b,decide predict correctness with alu output
 	val exBranchSucess=(alu.io.output=/=0.U)
-	printf(p"----[tmp] alu.io.output:0x${Hexadecimal(alu.io.output)} exBranchSucess:$exBranchSucess\n")
-	printf(p"----[tmp] exPc:0x${Hexadecimal(exPc)} exImm:0x${Hexadecimal(exImm)}\n")
-	printf(p"----[tmp] inst:0x${Binary(exInst)}\n")
+	printf(p"----[ex] exImm:0x${Hexadecimal(exImm)}\n")
+	printf(p"----[ex] alu.io.output:0x${Hexadecimal(alu.io.output)} exBranchSucess:$exBranchSucess\n")
+	printf(p"----[ex] inst:0x${Binary(exInst)}\n")
 	exBranchTarget:=Mux(exSignal.jalr,alu.io.output,Mux(exBranchSucess,exPc+exImm,exPc+4.U))
 	exPredictUnsuccess:=(!exInvalid)&(exSignal.jalr|(exSignal.branch&(exBranchSucess=/=exInst(31))))
 	//-------ME
@@ -193,6 +194,9 @@ class Core extends Module{
 	val useAfterLoadHazardA=exSignal.useRegA&(!meInvalid)&meSignal.writeBack&(meRegDest===exRegA)&(meSignal.accessMem)
 	val useAfterLoadHazardB=exSignal.useRegA&(!meInvalid)&meSignal.writeBack&(meRegDest===exRegA)&(meSignal.accessMem)
 	useAfterLoadHazard:=useAfterLoadHazardA|useAfterLoadHazardB
+	//-------fence.i
+	import MemOpSignal._
+	haveMemWriteToDo:=idSignal.fenceI&((exSignal.accessMem&(exSignal.memOp===M_STORE))|(meSignal.accessMem&(meSignal.memOp===M_STORE)))
 	//-------Debug
 	io.debug.regs:=regfile.io.debug
 	printf(p"----[status] stall: pc=$pcStall id=$idStall ex=$exStall me=$meStall wb=$wbStall\n")

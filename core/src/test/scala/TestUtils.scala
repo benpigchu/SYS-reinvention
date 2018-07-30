@@ -9,6 +9,7 @@ object InstGen{
 		val JAL=0x6FL
 		val JALR=0x67L
 		val BRANCH=0x63L
+		val MISC_MEM=0xFL
 	}
 	private object Funct3{
 		val ADD=0x0L
@@ -35,6 +36,8 @@ object InstGen{
 		val BGE=0x5L
 		val BLTU=0x6L
 		val BGEU=0x7L
+		val FENCE=0x0L
+		val FENCE_I=0x1L
 	}
 	private def addPart(origin:Long,value:Long,left:Long,right:Long=0L)={
 		val width=left-right
@@ -136,5 +139,7 @@ object InstGen{
 	def BGE(rs1:Long,rs2:Long,imm:Long)=B(rs1,rs2,imm,Funct3.BGE,Opcode.BRANCH)
 	def BLTU(rs1:Long,rs2:Long,imm:Long)=B(rs1,rs2,imm,Funct3.BLTU,Opcode.BRANCH)
 	def BGEU(rs1:Long,rs2:Long,imm:Long)=B(rs1,rs2,imm,Funct3.BGEU,Opcode.BRANCH)
+	def FENCE(pred:Long,succ:Long)=I(0,0,((pred&0xF)<<4)+(succ&0xF),Funct3.FENCE,Opcode.MISC_MEM)
+	def FENCE_I=I(0,0,0,Funct3.FENCE_I,Opcode.MISC_MEM)
 	def NOP=ADDI(0,0,0)
 }
