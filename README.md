@@ -13,5 +13,5 @@ This is one of various projects in the summer system challenge course of Tsinghu
 - `docker`: The tools and environments, in a docker image.
 - `core`: The core CPU design, a Chisel project.
 - `soc`: Fit the core into the Thinpad board, a Vivado project.(not added for now)
-- `monitor`: A copy from https://github.com/char-fish-after-lunch/SystemOnCat/tree/master/prog/monitor (only modified part is added)
+- `monitor`: A modified copy from https://github.com/char-fish-after-lunch/SystemOnCat/tree/master/prog/monitor
 - `makefile`: It's just a collection of scripts.
