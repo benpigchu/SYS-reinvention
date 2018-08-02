@@ -107,12 +107,12 @@ class Core extends Module{
 	exInst:=Mux(exStall,exInst,idInst)
 	exImm:=Mux(exStall,exImm,idImm)
 	exSignal:=Mux(exStall,exSignal,idSignal)
-	exRawDataA:=Mux(exStall,exRawDataA,regfile.io.readDataA)
-	exRawDataB:=Mux(exStall,exRawDataB,regfile.io.readDataB)
-	val exRegA=exInst(19,15)
-	val exRegB=exInst(24,20)
 	val exDataA=Wire(UInt(32.W))
 	val exDataB=Wire(UInt(32.W))
+	exRawDataA:=Mux(exStall,exDataA,regfile.io.readDataA)
+	exRawDataB:=Mux(exStall,exDataB,regfile.io.readDataB)
+	val exRegA=exInst(19,15)
+	val exRegB=exInst(24,20)
 	val alu=Module(new ALU)
 	alu.io.op:=exSignal.aluOp
 	import ALUASourceSignal._
@@ -132,7 +132,7 @@ class Core extends Module{
 	printf(p"----[ex] exImm:0x${Hexadecimal(exImm)}\n")
 	printf(p"----[ex] alu.io.output:0x${Hexadecimal(alu.io.output)} exBranchSucess:$exBranchSucess\n")
 	printf(p"----[ex] inst:0x${Binary(exInst)}\n")
-	exBranchTarget:=Mux(exSignal.jalr,alu.io.output,Mux(exBranchSucess,exPc+exImm,exPc+4.U))
+	exBranchTarget:=Mux(exSignal.jalr,Cat(alu.io.output(31,1),0.U(1.W)),Mux(exBranchSucess,exPc+exImm,exPc+4.U))
 	exPredictUnsuccess:=(!exInvalid)&(exSignal.jalr|(exSignal.branch&(exBranchSucess=/=exInst(31))))
 	//-------ME
 	meStall:=wbStall//TODO

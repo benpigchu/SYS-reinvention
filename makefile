@@ -1,4 +1,4 @@
-.PHONY: env_build env_enter
+.PHONY: env_build env
 docker_image ?= reinvention_env
 tag ?= 0.0
 innerpwd ?= /root/workspace

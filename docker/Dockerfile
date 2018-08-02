@@ -26,4 +26,8 @@ RUN cd verilator && \
 # from https://stackoverflow.com/questions/6784463/error-trustanchors-parameter-must-be-non-empty/50103533#50103533
 RUN /usr/bin/printf '\xfe\xed\xfe\xed\x00\x00\x00\x02\x00\x00\x00\x00\xe2\x68\x6e\x45\xfb\x43\xdf\xa4\xd9\x92\xdd\x41\xce\xb6\xb2\x1c\x63\x30\xd7\x92' > /etc/ssl/certs/java/cacerts && \
 	/var/lib/dpkg/info/ca-certificates-java.postinst configure
+COPY libmpfr4_3.1.6-1_amd64.deb .
+RUN dpkg -i ./libmpfr4_3.1.6-1_amd64.deb
+ADD rv64-prebuild.tgz .
+ENV PATH=/root/environment/toolchain/bin:$PATH
 ENTRYPOINT ["/bin/bash"]
