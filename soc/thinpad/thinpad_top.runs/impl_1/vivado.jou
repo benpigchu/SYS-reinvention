@@ -1,0 +1,12 @@
+#-----------------------------------------------------------
+# Vivado v2017.1 (64-bit)
+# SW Build 1846317 on Fri Apr 14 18:55:03 MDT 2017
+# IP Build 1846188 on Fri Apr 14 20:52:08 MDT 2017
+# Start of session at: Fri Aug  3 20:34:27 2018
+# Process ID: 3356
+# Current directory: C:/Users/Jason/Desktop/thinpad/thinpad_top.runs/impl_1
+# Command line: vivado.exe -log thinpad_top.vdi -applog -product Vivado -messageDb vivado.pb -mode batch -source thinpad_top.tcl -notrace
+# Log file: C:/Users/Jason/Desktop/thinpad/thinpad_top.runs/impl_1/thinpad_top.vdi
+# Journal file: C:/Users/Jason/Desktop/thinpad/thinpad_top.runs/impl_1\vivado.jou
+#-----------------------------------------------------------
+source thinpad_top.tcl -notrace
