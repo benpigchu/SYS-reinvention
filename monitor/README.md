@@ -1,6 +1,10 @@
 ## This is a modified version of the original Meownitor
 
-We modified the build script to work with 32-bit mode of `riscv64-unknown-elf-gcc` instead of `riscv32-unknown-elf-gcc`
+We modified the build script to:
+- work with 32-bit mode of `riscv64-unknown-elf-gcc` instead of `riscv32-unknown-elf-gcc`
+- do not include interrupt, etc.
+- put the start of the monitor at 0
+- modify the serial memory address
 
 -----------------------------------
 

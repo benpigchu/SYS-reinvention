@@ -18,7 +18,7 @@ class CoreTesterBase(core:Core)extends PeekPokeTester(core){
 	protected def setByte(address:Long,data:Short)={
 		val addr=address%0x3FFFFFFFFL
 		if(!(address<0||address>mem.length)){
-			mem(address)=(data&(0xFF.shortValue)).shortValue
+			mem(address)=(data&(0xFF)).shortValue
 		}
 	}
 	protected def getHalf(address:Long):Int={
@@ -81,9 +81,9 @@ class CoreTesterBase(core:Core)extends PeekPokeTester(core){
 	}
 }
 
-class CoreTestBase(coreTesterGen:(Core)=>CoreTesterBase) extends ChiselFlatSpec{
+class CoreTestBase(coreTesterGen:(Core)=>CoreTesterBase,verbose:Boolean=true) extends ChiselFlatSpec{
 	"Core" should "works" in {
-		iotesters.Driver.execute(Array("--is-verbose"),()=>new Core){
+		iotesters.Driver.execute((if(verbose){Array("--is-verbose")}else{Array()}),()=>new Core){
 			coreTesterGen
 		}should be(true)
 	}

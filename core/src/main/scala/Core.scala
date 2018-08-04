@@ -68,6 +68,7 @@ class Core extends Module{
 	val idExpectedBranch=Wire(Bool())
 	val exBranchTarget=Wire(UInt(32.W))
 	val exPredictUnsuccess=Wire(Bool())
+	printf(p"----[stage]-----------------------------\n")
 	//-------IF
 	printf(p"----[branch] idExpectedBranch:$idExpectedBranch idExpectedTarget:0x${Hexadecimal(idExpectedTarget)}\n")
 	printf(p"----[branch] exPredictUnsuccess:$exPredictUnsuccess exBranchTarget:0x${Hexadecimal(exBranchTarget)}\n")
@@ -102,7 +103,7 @@ class Core extends Module{
 	//also calculate jump target
 	val useAfterLoadHazard=Wire(Bool())
 	exStall:=meStall|useAfterLoadHazard//TODO
-	exInvalid:=(exStall&exInvalid)|(idStall&(!exStall))|((!exStall)&exPredictUnsuccess)|idInvalid
+	exInvalid:=(exStall&exInvalid)|(idStall&(!exStall))|((!exStall)&exPredictUnsuccess)|((idInvalid&(!exStall)))
 	exPc:=Mux(exStall,exPc,idPc)
 	exInst:=Mux(exStall,exInst,idInst)
 	exImm:=Mux(exStall,exImm,idImm)
@@ -129,14 +130,15 @@ class Core extends Module{
 	//for jar,always predicted correct
 	//for b,decide predict correctness with alu output
 	val exBranchSucess=(alu.io.output=/=0.U)
-	printf(p"----[ex] exImm:0x${Hexadecimal(exImm)}\n")
+	printf(p"----[ex] exImm:0x${Hexadecimal(exImm)} alu.io.op:${Hexadecimal(alu.io.op)}\n")
+	printf(p"----[ex] alu.io.inputA:0x${Hexadecimal(alu.io.inputA)} alu.io.inputB:0x${Hexadecimal(alu.io.inputB)}\n")
 	printf(p"----[ex] alu.io.output:0x${Hexadecimal(alu.io.output)} exBranchSucess:$exBranchSucess\n")
 	printf(p"----[ex] inst:0x${Binary(exInst)}\n")
 	exBranchTarget:=Mux(exSignal.jalr,Cat(alu.io.output(31,1),0.U(1.W)),Mux(exBranchSucess,exPc+exImm,exPc+4.U))
 	exPredictUnsuccess:=(!exInvalid)&(exSignal.jalr|(exSignal.branch&(exBranchSucess=/=exInst(31))))
 	//-------ME
 	meStall:=wbStall//TODO
-	meInvalid:=(meStall&meInvalid)|(exStall&(!meStall))|exInvalid
+	meInvalid:=(meStall&meInvalid)|(exStall&(!meStall))|((exInvalid&(!meStall)))
 	mePc:=Mux(meStall,mePc,exPc)
 	meInst:=Mux(meStall,meInst,exInst)
 	meImm:=Mux(meStall,meImm,exImm)
@@ -161,7 +163,7 @@ class Core extends Module{
 	))
 	//-------WB
 	wbStall:=(!io.mem.ready)//currently we block the whole pipeline when io is not ready
-	wbInvalid:=(wbStall&wbInvalid)|(meStall&(!wbStall))|meInvalid
+	wbInvalid:=(wbStall&wbInvalid)|(meStall&(!wbStall))|(meInvalid&(!wbStall))
 	wbPc:=Mux(wbStall,wbPc,mePc)
 	wbInst:=Mux(wbStall,wbInst,meInst)
 	wbImm:=Mux(wbStall,wbImm,meImm)
@@ -192,7 +194,7 @@ class Core extends Module{
 	printf(p"----[forword] me:$meRegDest dataB:${Hexadecimal(meALUResult)} use:${meSignal.writeBack}\n")
 	printf(p"----[forword] wb:$wbRegDest dataB:${Hexadecimal(wbRegData)} use:${wbSignal.writeBack}\n")
 	val useAfterLoadHazardA=exSignal.useRegA&(!meInvalid)&meSignal.writeBack&(meRegDest===exRegA)&(meSignal.accessMem)
-	val useAfterLoadHazardB=exSignal.useRegA&(!meInvalid)&meSignal.writeBack&(meRegDest===exRegA)&(meSignal.accessMem)
+	val useAfterLoadHazardB=exSignal.useRegB&(!meInvalid)&meSignal.writeBack&(meRegDest===exRegB)&(meSignal.accessMem)
 	useAfterLoadHazard:=useAfterLoadHazardA|useAfterLoadHazardB
 	//-------fence.i
 	import MemOpSignal._
