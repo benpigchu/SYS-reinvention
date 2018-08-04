@@ -20,8 +20,17 @@ module memory(
 	input wire uart_tsre,
 	output wire uart_rdn,
 	output wire uart_wrn,
-    output wire ram_ready
+    output wire ram_ready,
 
+    output wire	flash_finished,
+    output wire[22:0] flash_addr,
+    inout wire[15:0] flash_data,
+    output wire flash_byte,
+    output wire flash_vpen,
+    output wire flash_rp,
+    output wire flash_ce,
+    output wire flash_oe,
+    output wire flash_we
 
 );
 
@@ -31,6 +40,22 @@ module memory(
     reg[31:0] reg_data = 32'b0;
     reg[19:0] reg_addr = 20'b0;
     reg reg_ready = 'b1;
+    reg read_ok = 'b0;
+
+    reg rflag,flash_finished_tmp = 'b0;
+    reg[2:0] flash_state = 'b000;
+    reg[15:0] current_addr = 16'b0;
+    reg[15:0] ram_load_addr = 16'b0;
+    reg[22:0] reg_flash_addr = 23'b0;
+    reg[15:0] reg_flash_data = 16'b0;
+    integer cnt = 0;
+    integer write_wait_count = 0;
+
+    reg reg_flash_we,reg_flash_oe,reg_flash_byte,reg_flash_vpen,reg_flash_rp,reg_flash_ce = 'b1;
+
+    reg[15:0] FLASH_DATA_LEN = 'h042E;	
+
+    parameter uart_addr = 'hBF00;
 
     assign sram_be_n = reg_ram_be;
     assign sram_ce_n = reg_ram_ce;
@@ -42,8 +67,17 @@ module memory(
     assign sram_data = (!mem_ce_n & mem_write) ? reg_data : 32'bz;
     assign sram_addr = reg_addr;
     assign ram_ready = reg_ready;
-
-    parameter uart_addr = 'hBF00;
+    assign flash_finished = flash_finished_tmp;
+    assign flash_we = reg_flash_we; 
+	assign flash_oe = reg_flash_oe;
+    assign flash_addr = reg_flash_addr;
+    assign flash_data = ((!flash_ce) && (!flash_we)) : reg_flash_data : 16'bz;
+							
+	assign flash_byte = reg_flash_byte; 
+	assign flash_vpen = reg_flash_vpen; 
+	assign flash_rp = reg_flash_rp;
+	assign flash_ce = reg_flash_ce; 
+    
 
 
     reg[2:0] state = 'b000;
@@ -61,57 +95,136 @@ begin
         reg_addr <= 20'b0;
        // reg_data_out <= 32'b0;
         reg_ready <= 'b1;
+
+        flash_state <= 'b000;   
+		current_addr <= 16'b0;
+		reg_flash_addr <= 20'b0;
+		ram_load_addr <= 16'b0; 
+		flash_finished_tmp <= 'b0;
     end
     else begin
-        case (state)
-            'b000: begin
-                if (!mem_ce_n) begin
-                    reg_ready <= 'b0;
-                    reg_ram_ce <= 'b0;
-                    reg_ram_be <= 'b0000;
-                    reg_addr <= addr_in;
-                    if (mem_write) begin
-                        reg_data <= data_in;
+        if (flash_finished_tmp = 'b1) begin
+            flash_ce <= 'b1;
+            case (state)
+                'b000: begin
+                    if (!mem_ce_n) begin
+                        reg_ready <= 'b0;
+                        reg_ram_ce <= 'b0;
+                        reg_ram_be <= 'b0000;
+                        reg_addr <= addr_in;
+                        if (mem_write) begin
+                            reg_data <= data_in;
+                        end
+                        state <= 'b001;
                     end
-                    state <= 'b001;
+                end  
+                'b001: begin
+                    if (addr_in == uart_addr) begin
+                        reg_ram_ce <= 'b1;
+                        reg_ram_be <= 'b1111;
+                        if (mem_read) begin
+                            reg_uart_rdn <= 'b0;
+                        end
+                        else if (mem_write) begin
+                            reg_uart_wrn <= 'b0;
+                        end
+                    end
+                    else begin        
+                        if (mem_read) begin
+                            reg_ram_oe <= 'b0;
+                        end
+                        else if (mem_write) begin
+                            reg_ram_we <= 'b0;
+                        end
+                    end
+                    state <= 'b010;
                 end
-            end  
-            'b001: begin
-                if (addr_in == uart_addr) begin
+                'b010: begin
                     reg_ram_ce <= 'b1;
+                    reg_ram_oe <= 'b1;
+                    reg_ram_we <= 'b1;
+                    reg_uart_wrn <= 'b1;
+                    reg_uart_rdn <= 'b1;
                     reg_ram_be <= 'b1111;
-                    if (mem_read) begin
-                        reg_uart_rdn <= 'b0;
-                    end
-                    else if (mem_write) begin
-                        reg_uart_wrn <= 'b0;
-                    end
+                    reg_ready <= 'b1;
+                    reg_data <= 32'b0;
+                    reg_addr <= 20'b0;
+                    state <= 'b000;
                 end
-                else begin        
-                    if (mem_read) begin
-                        reg_ram_oe <= 'b0;
+                default: 
+                    state <= 'b000;
+            endcase
+        end
+        else begin
+            reg_flash_ce <= 'b0;
+			if (cnt >= 1000) begin
+				cnt <= 0;
+				case (flash_state)		
+				    'b000: begin
+						reg_ram_ce <= 'b0;
+						reg_ram_we <= 'b1;
+						reg_ram_oe <= 'b1;
+						reg_uart_wrn <= 'b1;
+						reg_uart_rdn <= 'b1;
+						//reg_flash_we <= 'b0;
+						reg_flash_we <= 'b0;
+                        reg_flash_oe <= 'b1;
+							
+						reg_flash_byte <= 'b1;
+						reg_flash_vpen <= 'b1;
+						reg_flash_rp <= 'b1;
+						reg_flash_ce <= 'b0;
+						flash_state <= 'b001;
                     end
-                    else if (mem_write) begin
-                        reg_ram_we <= 'b0;
+					
+                    'b001: begin
+                        reg_flash_data <= 'h00FF;
+						flash_state <= 'b010;
                     end
+							
+                    'b010: begin
+                        reg_flash_we <= 'b1;
+						flash_state <= 'b011;
+                    end
+
+                    'b011: begin
+                        reg_flash_oe <= 'b0;
+						reg_flash_addr <= 22'b0;
+						flash_addr[16:1] <= current_addr;
+						flash_state <= 'b100;
+                    end
+
+                    'b100: begin
+                        reg_addr <= 'b0000 & ram_load_addr;
+						reg_data <= 'h0000 & flash_data;
+						reg_flash_oe <= 'b1;
+						reg_ram_we <= 'b0;
+						flash_state <= 'b101;
+                    end
+					
+                    'b101: begin
+                        reg_ram_we <= 'b1;
+						current_addr <= current_addr + 1;
+						ram_load_addr <= ram_load_addr + 1;
+						flash_state <= 'b000;
+                    end
+					
+                    default: begin
+                        flash_state <= 'b000;
+                    end
+				endcase
+					
+				if (current_addr >= 'h042E) begin
+						current_addr <= 16'b0;
+						ram_load_addr <= 16'b0;
+						flash_finished_tmp <= 'b1;
                 end
-                state <= 'b010;
             end
-            'b010: begin
-                reg_ram_ce <= 'b1;
-                reg_ram_oe <= 'b1;
-                reg_ram_we <= 'b1;
-                reg_uart_wrn <= 'b1;
-                reg_uart_rdn <= 'b1;
-                reg_ram_be <= 'b1111;
-                reg_ready <= 'b1;
-                reg_data <= 32'b0;
-                reg_addr <= 20'b0;
-                state <= 'b000;
-            end
-            default: 
-                state <= 'b000;
-        endcase
+
+			else begin
+				cnt <= cnt + 1;
+			end
+        end
     end
 end
 
