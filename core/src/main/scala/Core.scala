@@ -97,7 +97,7 @@ class Core extends Module{
 	//for jalr,always wait to ex
 	//for jar,always predicted correct
 	//for b,expect success when jumping back(imm(31)==inst(31))
-	idExpectedBranch:=(!idInvalid)&(idSignal.jal|(idSignal.branch&idInst(31)))
+	idExpectedBranch:=(!idStall)&(!idInvalid)&(idSignal.jal|(idSignal.branch&idInst(31)))
 	//-------EX
 	//also calculate address for me
 	//also calculate jump target
@@ -133,9 +133,9 @@ class Core extends Module{
 	printf(p"----[ex] exImm:0x${Hexadecimal(exImm)} alu.io.op:${Hexadecimal(alu.io.op)}\n")
 	printf(p"----[ex] alu.io.inputA:0x${Hexadecimal(alu.io.inputA)} alu.io.inputB:0x${Hexadecimal(alu.io.inputB)}\n")
 	printf(p"----[ex] alu.io.output:0x${Hexadecimal(alu.io.output)} exBranchSucess:$exBranchSucess\n")
-	printf(p"----[ex] inst:0x${Binary(exInst)}\n")
+	printf(p"----[ex] inst:${Binary(exInst)}\n")
 	exBranchTarget:=Mux(exSignal.jalr,Cat(alu.io.output(31,1),0.U(1.W)),Mux(exBranchSucess,exPc+exImm,exPc+4.U))
-	exPredictUnsuccess:=(!exInvalid)&(exSignal.jalr|(exSignal.branch&(exBranchSucess=/=exInst(31))))
+	exPredictUnsuccess:=(!exStall)&(!exInvalid)&(exSignal.jalr|(exSignal.branch&(exBranchSucess=/=exInst(31))))
 	//-------ME
 	meStall:=wbStall//TODO
 	meInvalid:=(meStall&meInvalid)|(exStall&(!meStall))|((exInvalid&(!meStall)))
@@ -190,11 +190,11 @@ class Core extends Module{
 	exDataA:=Mux(exNeedMeForwardA,meALUResult,Mux(exNeedWbForwardA,wbRegData,exRawDataA))
 	exDataB:=Mux(exNeedMeForwardB,meALUResult,Mux(exNeedWbForwardB,wbRegData,exRawDataB))
 	printf(p"----[forword] regA:$exRegA dataA:${Hexadecimal(exDataA)} use:${exSignal.useRegA}\n")
-	printf(p"----[forword] regB:$exRegA dataB:${Hexadecimal(exDataB)} use:${exSignal.useRegB}\n")
-	printf(p"----[forword] me:$meRegDest dataB:${Hexadecimal(meALUResult)} use:${meSignal.writeBack}\n")
-	printf(p"----[forword] wb:$wbRegDest dataB:${Hexadecimal(wbRegData)} use:${wbSignal.writeBack}\n")
-	val useAfterLoadHazardA=exSignal.useRegA&(!meInvalid)&meSignal.writeBack&(meRegDest===exRegA)&(meSignal.accessMem)
-	val useAfterLoadHazardB=exSignal.useRegB&(!meInvalid)&meSignal.writeBack&(meRegDest===exRegB)&(meSignal.accessMem)
+	printf(p"----[forword] regB:$exRegB dataB:${Hexadecimal(exDataB)} use:${exSignal.useRegB}\n")
+	printf(p"----[forword] me:$meRegDest result:${Hexadecimal(meALUResult)} use:${meSignal.writeBack}\n")
+	printf(p"----[forword] wb:$wbRegDest result:${Hexadecimal(wbRegData)} use:${wbSignal.writeBack}\n")
+	val useAfterLoadHazardA=exSignal.useRegA&(!meInvalid)&meSignal.writeBack&(meRegDest===exRegA)&(meSignal.accessMem)&(exRegA=/=0.U)
+	val useAfterLoadHazardB=exSignal.useRegB&(!meInvalid)&meSignal.writeBack&(meRegDest===exRegB)&(meSignal.accessMem)&(exRegB=/=0.U)
 	useAfterLoadHazard:=useAfterLoadHazardA|useAfterLoadHazardB
 	//-------fence.i
 	import MemOpSignal._

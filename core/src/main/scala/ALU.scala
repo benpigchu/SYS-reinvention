@@ -45,8 +45,8 @@ class ALU extends Module{
 		OP_AND->(a&b),
 		OP_SUB->(a-b),
 		OP_SRA->((a.asSInt>>b(4,0)).asUInt),
-		OP_SGE->Mux(a.asSInt>b.asSInt,1.U,0.U),
-		OP_SGEU->Mux(a>b,1.U,0.U),
+		OP_SGE->Mux(a.asSInt>=b.asSInt,1.U,0.U),
+		OP_SGEU->Mux(a>=b,1.U,0.U),
 		OP_SEQ->Mux(a===b,1.U,0.U),
 		OP_SNE->Mux(a=/=b,1.U,0.U)
 	))

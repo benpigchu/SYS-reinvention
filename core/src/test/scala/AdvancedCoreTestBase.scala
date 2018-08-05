@@ -7,21 +7,24 @@ import reinventation_core._
 
 class AdvancedCoreTesterBase(core:Core) extends CoreTesterBase(core){
 	protected val serialOutput:StringBuilder=new StringBuilder
+	protected val serialInput:StringBuilder=new StringBuilder
 	protected override def getByte(address:Long):Short={
 		if(address==0x80000004L){
 			println("----serial-status---")
-			return 0x0f
+			return if(serialInput.size>0){0xFF}else{0x0F}
 		}
 		if(address==0x80000000L){
-			println("----serial-output---")
-			return 0x00
+			println("----serial-input---")
+			val char=serialInput(0)
+			serialInput.deleteCharAt(0)
+			return (char.toInt&0xFF).shortValue
 		}
 		super.getByte(address)
 	}
 	protected override def setByte(address:Long,data:Short)={
 		if(address==0x80000000L){
 			val char=data.toChar
-			println(f"----serial-input[ $char ( $data ) ]----")
+			println(f"----serial-output[ $char ( $data ) ]----")
 			serialOutput+=char
 		}
 		super.setByte(address,data)
@@ -34,12 +37,3 @@ class AdvancedCoreTesterBase(core:Core) extends CoreTesterBase(core){
 	}
 }
 
-class WithMonitorTester(core:Core) extends AdvancedCoreTesterBase(core){
-	loadImage(getClass.getResourceAsStream("/monitor.bin"))
-	println(s"${getWord(0)}-${getWord(4)}-${getWord(8)}-${getWord(12)}")
-	stepStages(200)
-	println(s"output:size=${serialOutput.size}")
-	println(serialOutput.result)
-}
-
-class WithMonitorTest extends CoreTestBase(c=>new WithMonitorTester(c),false){}
