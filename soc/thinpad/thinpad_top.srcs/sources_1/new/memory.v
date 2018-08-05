@@ -53,7 +53,7 @@ module memory(
 
     reg reg_flash_we,reg_flash_oe,reg_flash_byte,reg_flash_vpen,reg_flash_rp,reg_flash_ce = 'b1;
 
-    reg[15:0] FLASH_DATA_LEN = 'h042E;	
+    reg[15:0] flash_end_addr = 'h042E;	
 
     parameter uart_addr = 'hBF00;
 
@@ -103,7 +103,7 @@ begin
 		flash_finished_tmp <= 'b0;
     end
     else begin
-        if (flash_finished_tmp = 'b1) begin
+        if (flash_finished = 'b1) begin
             flash_ce <= 'b1;
             case (state)
                 'b000: begin
@@ -196,10 +196,17 @@ begin
 
                     'b100: begin
                         reg_addr <= 'b0000 & ram_load_addr;
-						reg_data <= 'h0000 & flash_data;
-						reg_flash_oe <= 'b1;
-						reg_ram_we <= 'b0;
-						flash_state <= 'b101;
+                        if (read_ok) begin
+                            reg_data[31:16] <= flash_data;
+                            reg_flash_oe <= 'b1;
+						    reg_ram_we <= 'b0;
+						    flash_state <= 'b101;
+                        end
+                        else begin
+                            reg_data[15:0] <= flash_data;
+                            current_addr <= current_addr + 1;
+                            flash_state <= 'b000;
+                        end
                     end
 					
                     'b101: begin
@@ -214,7 +221,7 @@ begin
                     end
 				endcase
 					
-				if (current_addr >= 'h042E) begin
+				if (current_addr >= flash_end_addr) begin
 						current_addr <= 16'b0;
 						ram_load_addr <= 16'b0;
 						flash_finished_tmp <= 'b1;
