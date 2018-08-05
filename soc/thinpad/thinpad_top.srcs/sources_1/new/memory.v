@@ -71,7 +71,7 @@ module memory(
     assign flash_we = reg_flash_we; 
 	assign flash_oe = reg_flash_oe;
     assign flash_addr = reg_flash_addr;
-    assign flash_data = ((!flash_ce) && (!flash_we)) : reg_flash_data : 16'bz;
+    assign flash_data = ((!flash_ce) && (!flash_we)) ? reg_flash_data : 16'bz;
 							
 	assign flash_byte = reg_flash_byte; 
 	assign flash_vpen = reg_flash_vpen; 
@@ -103,8 +103,8 @@ begin
 		flash_finished_tmp <= 'b0;
     end
     else begin
-        if (flash_finished = 'b1) begin
-            flash_ce <= 'b1;
+        if (flash_finished == 'b1) begin
+            reg_flash_ce <= 'b1;
             case (state)
                 'b000: begin
                     if (!mem_ce_n) begin
@@ -190,7 +190,7 @@ begin
                     'b011: begin
                         reg_flash_oe <= 'b0;
 						reg_flash_addr <= 22'b0;
-						flash_addr[16:1] <= current_addr;
+						reg_flash_addr[16:1] <= current_addr;
 						flash_state <= 'b100;
                     end
 
