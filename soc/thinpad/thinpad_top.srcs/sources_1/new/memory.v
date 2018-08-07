@@ -53,7 +53,7 @@ module memory(
 
     reg reg_flash_we,reg_flash_oe,reg_flash_byte,reg_flash_vpen,reg_flash_rp,reg_flash_ce = 'b1;
 
-    reg[15:0] flash_end_addr = 'h042E;	
+    reg[15:0] flash_end_addr = 'h1000;	
 
     parameter uart_addr = 'hBF00;
 
@@ -63,10 +63,11 @@ module memory(
     assign sram_oe_n = reg_ram_oe;
     assign uart_rdn = reg_uart_rdn;
     assign uart_wrn = reg_uart_wrn;
-    assign data_out = (!mem_ce_n & mem_read) ? sram_data : 32'bz;
-    assign sram_data = (!mem_ce_n & mem_write) ? reg_data : 32'bz;
+    assign data_out = (!sram_ce_n && mem_read) ? sram_data : 32'bz;
+    assign sram_data = (!sram_ce_n && !sram_we_n) ? reg_data : 32'bz;
     assign sram_addr = reg_addr;
     assign ram_ready = reg_ready;
+
     assign flash_finished = flash_finished_tmp;
     assign flash_we = reg_flash_we; 
 	assign flash_oe = reg_flash_oe;
@@ -167,7 +168,6 @@ begin
 						reg_uart_wrn <= 'b1;
 						reg_uart_rdn <= 'b1;
 						//reg_flash_we <= 'b0;
-						reg_flash_we <= 'b0;
                         reg_flash_oe <= 'b1;
 							
 						reg_flash_byte <= 'b1;
@@ -179,6 +179,7 @@ begin
 					
                     'b001: begin
                         reg_flash_data <= 'h00FF;
+                        reg_flash_we <= 'b0;
 						flash_state <= 'b010;
                     end
 							
@@ -198,7 +199,6 @@ begin
                         reg_addr <= 'b0000 & ram_load_addr;
                         if (read_ok) begin
                             reg_data[31:16] <= flash_data;
-                            reg_flash_oe <= 'b1;
 						    reg_ram_we <= 'b0;
 						    flash_state <= 'b101;
                         end
@@ -207,6 +207,7 @@ begin
                             current_addr <= current_addr + 1;
                             flash_state <= 'b000;
                         end
+                        reg_flash_oe <= 'b1;
                     end
 					
                     'b101: begin
