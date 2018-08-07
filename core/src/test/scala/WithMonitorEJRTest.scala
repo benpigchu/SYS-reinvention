@@ -7,7 +7,7 @@ import reinventation_core._
 
 class WithMonitorEJRTester(core:Core) extends AdvancedCoreTesterBase(core){
 	loadImage(getClass.getResourceAsStream("/monitor.bin"))
-	serialInput++="E 0x400000\n0x0cafefb7\n0x00008067\n\nJ 0x400000\nR\n"
+	serialInput++="E 0x200000\n0x0cafefb7\n0x00008067\n\nJ 0x200000\nR\n"
 	//lui x31 0xcafe
 	//jalr ra(0)
 	stepStages(80000)
@@ -21,7 +21,7 @@ class WithMonitorEJRTester(core:Core) extends AdvancedCoreTesterBase(core){
 		++"  WITH_INTERRUPT = off\n"
 		++"  WITH_IRQ = off\n"
 		++"  WITH_ECALL = off\n"
-		++">>> [0x00400000] [0x00400004] [0x00400008] >>> >>> x(0x00000000)  =  0x00000000\n"
+		++">>> [0x00200000] [0x00200004] [0x00200008] >>> >>> x(0x00000000)  =  0x00000000\n"
 		++"x(0x00000001)  =  0x00001e94\n"
 		++"x(0x00000002)  =  0x00000000\n"
 		++"x(0x00000003)  =  0x00000000\n"

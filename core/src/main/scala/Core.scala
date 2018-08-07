@@ -3,7 +3,7 @@ package reinventation_core
 import chisel3._
 import chisel3.util._
 
-class MemIO extends Bundle{
+class CoreMemIO extends Bundle{
 	val ready=Input(Bool())
 	val iaddr=Output(UInt(34.W))
 	val idata=Input(UInt(32.W))
@@ -15,13 +15,13 @@ class MemIO extends Bundle{
 	val rwwidth=Output(UInt(MemWidthSignal.width))
 }
 
-class DebugIO extends Bundle{
+class CoreDebugIO extends Bundle{
 	val regs=Output(Vec(32,UInt(32.W)))
 }
 
 class CoreIO extends Bundle{
-	val mem=new MemIO
-	val debug=new DebugIO
+	val mem=new CoreMemIO
+	val debug=new CoreDebugIO
 }
 
 class Core extends Module{

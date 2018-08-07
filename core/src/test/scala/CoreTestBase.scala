@@ -6,19 +6,19 @@ import reinventation_core._
 
 class CoreTesterBase(core:Core)extends PeekPokeTester(core){
 	//we use only the lower half bits, why we can not have unsigned number in jvm?
-	protected val mem=ArrayBuffer.fill[Short](0x800000)(0)
+	protected val mem=ArrayBuffer.fill[Short](0x400000)(0)
 	//init mem
 	protected def getByte(address:Long):Short={
 		val addr=address%0x3FFFFFFFFL
-		if(address<0||address>mem.length){
+		if(addr<0||addr>mem.length){
 			return 0
 		}
-		(mem(address)&(0xFF.shortValue)).shortValue
+		(mem(addr)&(0xFF.shortValue)).shortValue
 	}
 	protected def setByte(address:Long,data:Short)={
 		val addr=address%0x3FFFFFFFFL
-		if(!(address<0||address>mem.length)){
-			mem(address)=(data&(0xFF)).shortValue
+		if(!(addr<0||addr>mem.length)){
+			mem(addr)=(data&(0xFF)).shortValue
 		}
 	}
 	protected def getHalf(address:Long):Int={
