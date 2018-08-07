@@ -200,11 +200,13 @@ begin
                         if (read_ok) begin
                             reg_data[31:16] <= flash_data;
 						    reg_ram_we <= 'b0;
+                            read_ok <= 'b0;
 						    flash_state <= 'b101;
                         end
                         else begin
                             reg_data[15:0] <= flash_data;
                             current_addr <= current_addr + 1;
+                            read_ok <= 'b1;
                             flash_state <= 'b000;
                         end
                         reg_flash_oe <= 'b1;
