@@ -121,17 +121,20 @@ begin
                 'b000: begin
                     if (!mem_ce_n) begin
                         reg_ready <= 'b0;
-                        reg_ram_ce <= 'b0;
-                        reg_ram_be <= 'b0000;
-                        reg_data_out <= 32'b0;
-                        reg_addr <= addr_in[19:0];
-                        if (mem_write) begin
-                            reg_data <= data_in;
-                        end
-                        state <= 'b001;
-                    end
-                end  
+                    end 
+                end
                 'b001: begin
+                    reg_ram_ce <= 'b0;
+                    reg_ram_be <= 'b0000;
+                    reg_data_out <= 32'b0;
+                    reg_addr <= addr_in[19:0];
+                    if (mem_write) begin
+                        reg_data <= data_in;
+                    end
+                    state <= 'b010;
+                    
+                end  
+                'b010: begin
                     if (addr_in == uart_addr) begin
                         reg_ram_ce <= 'b1;
                         reg_ram_be <= 'b0000;
@@ -155,9 +158,9 @@ begin
                             reg_ram_we <= 'b0;
                         end
                     end
-                    state <= 'b010;
+                    state <= 'b011;
                 end
-                'b010: begin
+                'b011: begin
                     reg_ram_ce <= 'b1;
                     reg_ram_oe <= 'b1;
                     reg_ram_we <= 'b1;
@@ -178,6 +181,7 @@ begin
         end
         else begin
             reg_flash_ce <= 'b0;
+            reg_ready <= 'b0;
 			if (cnt >= 1000) begin
 				cnt <= 0;
 				case (flash_state)		
@@ -250,7 +254,7 @@ begin
 						current_addr <= 16'b0;
 						ram_load_addr <= 16'b0;
 						flash_finished_tmp <= 'b1;
-                        reg_ready <= 'b1;
+                        //reg_ready <= 'b1;
                 end
             end
 
