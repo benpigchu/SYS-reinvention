@@ -121,6 +121,7 @@ begin
                 'b000: begin
                     if (!mem_ce_n) begin
                         reg_ready <= 'b0;
+                        state <= 'b001;
                     end 
                 end
                 'b001: begin
