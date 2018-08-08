@@ -130,11 +130,12 @@ begin
                 'b001: begin
                     if (addr_in == uart_addr) begin
                         reg_ram_ce <= 'b1;
-                        reg_ram_be <= 'b0000;
+                        reg_ram_be <= 'b1111;
                         if (mem_read) begin
                             reg_uart_rdn <= 'b0;
                         end
                         else if (mem_write) begin
+                            reg_data[31:8] <= 24'b0;
                             reg_uart_wrn <= 'b0;
                         end
                     end
