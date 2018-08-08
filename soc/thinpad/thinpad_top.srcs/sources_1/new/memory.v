@@ -1,7 +1,7 @@
 module memory(
     input wire clk,
     input wire rst,
-    input wire[19:0] addr_in,
+    input wire[31:0] addr_in,
     input wire[31:0] data_in,
     input wire mem_read,
     input wire mem_write,
@@ -20,6 +20,7 @@ module memory(
 	input wire uart_tsre,
 	output wire uart_rdn,
 	output wire uart_wrn,
+	
     output wire ram_ready,
 
     output wire	flash_finished,
@@ -38,11 +39,14 @@ module memory(
     reg reg_uart_wrn,reg_uart_rdn = 'b1;
     reg[3:0] reg_ram_be = 'b1111;
     reg[31:0] reg_data = 32'b0;
+    reg[31:0] reg_data_out = 32'b0;
     reg[19:0] reg_addr = 20'b0;
     reg reg_ready = 'b1;
     reg read_ok = 'b0;
 
-    reg rflag,flash_finished_tmp = 'b0;
+    reg rflag = 'b1;
+    //reg flash_finished_tmp = 'b1;
+    reg flash_finished_tmp = 'b0;
     reg[2:0] flash_state = 'b000;
     reg[15:0] current_addr = 16'b0;
     reg[15:0] ram_load_addr = 16'b0;
@@ -55,7 +59,8 @@ module memory(
 
     reg[15:0] flash_end_addr = 'h1000;	
 
-    parameter uart_addr = 'hBF00;
+    parameter uart_addr = 'h20000000;
+    parameter check_addr = 'h20000001;
 
     assign sram_be_n = reg_ram_be;
     assign sram_ce_n = reg_ram_ce;
@@ -63,7 +68,7 @@ module memory(
     assign sram_oe_n = reg_ram_oe;
     assign uart_rdn = reg_uart_rdn;
     assign uart_wrn = reg_uart_wrn;
-    assign data_out = (!sram_ce_n && mem_read) ? sram_data : 32'bz;
+    assign data_out = reg_data_out;
     assign sram_data = (!sram_ce_n && !sram_we_n) ? reg_data : 32'bz;
     assign sram_addr = reg_addr;
     assign ram_ready = reg_ready;
@@ -101,6 +106,7 @@ begin
 		current_addr <= 16'b0;
 		reg_flash_addr <= 20'b0;
 		ram_load_addr <= 16'b0; 
+		//flash_finished_tmp <= 'b1;
 		flash_finished_tmp <= 'b0;
     end
     else begin
@@ -112,7 +118,8 @@ begin
                         reg_ready <= 'b0;
                         reg_ram_ce <= 'b0;
                         reg_ram_be <= 'b0000;
-                        reg_addr <= addr_in;
+                        reg_data_out <= 32'b0;
+                        reg_addr <= addr_in[19:0];
                         if (mem_write) begin
                             reg_data <= data_in;
                         end
@@ -122,13 +129,17 @@ begin
                 'b001: begin
                     if (addr_in == uart_addr) begin
                         reg_ram_ce <= 'b1;
-                        reg_ram_be <= 'b1111;
+                        reg_ram_be <= 'b0000;
                         if (mem_read) begin
                             reg_uart_rdn <= 'b0;
                         end
                         else if (mem_write) begin
                             reg_uart_wrn <= 'b0;
                         end
+                    end
+                    else if (addr_in == check_addr) begin
+                        reg_data_out[0] <= uart_tsre & uart_tbre;
+                        reg_data_out[1] <= uart_dataready;
                     end
                     else begin        
                         if (mem_read) begin
@@ -150,6 +161,9 @@ begin
                     reg_ready <= 'b1;
                     reg_data <= 32'b0;
                     reg_addr <= 20'b0;
+                    if (mem_read && (addr_in != check_addr)) begin
+                        reg_data_out <= sram_data;
+                    end
                     state <= 'b000;
                 end
                 default: 
@@ -163,6 +177,7 @@ begin
 				case (flash_state)		
 				    'b000: begin
 						reg_ram_ce <= 'b0;
+                        reg_ram_be <= 'b0000;
 						reg_ram_we <= 'b1;
 						reg_ram_oe <= 'b1;
 						reg_uart_wrn <= 'b1;
@@ -185,22 +200,23 @@ begin
 							
                     'b010: begin
                         reg_flash_we <= 'b1;
+                        reg_flash_addr <= 22'b0;
 						flash_state <= 'b011;
                     end
 
                     'b011: begin
                         reg_flash_oe <= 'b0;
-						reg_flash_addr <= 22'b0;
 						reg_flash_addr[16:1] <= current_addr;
 						flash_state <= 'b100;
                     end
 
                     'b100: begin
-                        reg_addr <= 'b0000 & ram_load_addr;
+                        reg_addr[19:16] <= 4'b0;
+                        reg_addr[15:0] <= ram_load_addr;
                         if (read_ok) begin
                             reg_data[31:16] <= flash_data;
 						    reg_ram_we <= 'b0;
-                            read_ok <= 'b0;
+						    read_ok <= 'b0;
 						    flash_state <= 'b101;
                         end
                         else begin
