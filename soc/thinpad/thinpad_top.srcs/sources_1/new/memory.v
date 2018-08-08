@@ -69,11 +69,7 @@ module memory(
     assign uart_rdn = reg_uart_rdn;
     assign uart_wrn = reg_uart_wrn;
     assign data_out = reg_data_out;
-<<<<<<< HEAD
-    assign sram_data = ((!sram_ce_n && (!sram_we_n)) || (sram_ce_n) && (!uart_wrn)) ? reg_data : 32'bz;
-=======
 	assign sram_data = (((!sram_ce_n) && (!sram_we_n)) || ((!reg_uart_wrn) && sram_ce_n)) ? reg_data : 32'bz;
->>>>>>> 99ed200286fb6ab0324b2c5486dc56d98c86f8b5
     assign sram_addr = reg_addr;
     assign ram_ready = reg_ready;
 
@@ -108,9 +104,16 @@ begin
 
         flash_state <= 'b000;   
 		current_addr <= 16'b0;
-		reg_flash_addr <= 20'b0;
+		reg_flash_addr <= 22'b0;
 		ram_load_addr <= 16'b0; 
 		//flash_finished_tmp <= 'b1;
+        reg_flash_data <= 16'b0;
+        reg_flash_byte <= 'b1;
+		reg_flash_vpen <= 'b1;
+		reg_flash_rp <= 'b1;
+		reg_flash_ce <= 'b1;
+        reg_flash_oe <= 'b1;
+        reg_flash_we <= 'b1;
 		flash_finished_tmp <= 'b0;
         reg_ready <= 'b0;
     end
@@ -255,6 +258,7 @@ begin
 						current_addr <= 16'b0;
 						ram_load_addr <= 16'b0;
 						flash_finished_tmp <= 'b1;
+                        reg_ram_ce <= 'b1;
                         //reg_ready <= 'b1;
                 end
             end
