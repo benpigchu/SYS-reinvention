@@ -99,6 +99,7 @@ begin
         reg_ram_be <= 'b1111;
         reg_data <= 32'b0;
         reg_addr <= 20'b0;
+        state <= 'b000;
        // reg_data_out <= 32'b0;
         //reg_ready <= 'b1;
 
