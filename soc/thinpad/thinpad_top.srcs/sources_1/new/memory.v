@@ -125,13 +125,15 @@ begin
                 'b000: begin
                     if (!mem_ce_n) begin
                         reg_ready <= 'b0;
+                        reg_data <= 32'b0;
+                        reg_addr <= 20'b0;
+                        reg_data_out <= 32'b0;
                         state <= 'b001;
                     end 
                 end
                 'b001: begin
                     reg_ram_ce <= 'b0;
                     reg_ram_be <= 'b0000;
-                    reg_data_out <= 32'b0;
                     reg_addr <= addr_in[19:0];
                     if (mem_write) begin
                         reg_data <= data_in;
@@ -173,8 +175,6 @@ begin
                     reg_uart_rdn <= 'b1;
                     reg_ram_be <= 'b1111;
                     reg_ready <= 'b1;
-                    reg_data <= 32'b0;
-                    reg_addr <= 20'b0;
                     if (mem_read && (addr_in != check_addr)) begin
                         reg_data_out <= sram_data;
                     end
