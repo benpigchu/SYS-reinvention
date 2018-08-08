@@ -139,7 +139,7 @@ begin
                     end
                     else if (addr_in == check_addr) begin
                         reg_data_out[0] <= uart_tsre & uart_tbre;
-                        reg_data_out[1] <= uart_dataready;
+                        reg_data_out[4] <= uart_dataready;
                     end
                     else begin        
                         if (mem_read) begin
