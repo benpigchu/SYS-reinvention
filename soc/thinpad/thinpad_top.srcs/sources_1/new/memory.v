@@ -41,7 +41,7 @@ module memory(
     reg[31:0] reg_data = 32'b0;
     reg[31:0] reg_data_out = 32'b0;
     reg[19:0] reg_addr = 20'b0;
-    reg reg_ready = 'b1;
+    reg reg_ready = 'b0;
     reg read_ok = 'b0;
 
     reg rflag = 'b1;
@@ -100,7 +100,7 @@ begin
         reg_data <= 32'b0;
         reg_addr <= 20'b0;
        // reg_data_out <= 32'b0;
-        reg_ready <= 'b1;
+        //reg_ready <= 'b1;
 
         flash_state <= 'b000;   
 		current_addr <= 16'b0;
@@ -108,6 +108,7 @@ begin
 		ram_load_addr <= 16'b0; 
 		//flash_finished_tmp <= 'b1;
 		flash_finished_tmp <= 'b0;
+        reg_ready <= 'b0;
     end
     else begin
         if (flash_finished == 'b1) begin
@@ -171,7 +172,6 @@ begin
             endcase
         end
         else begin
-            reg_ready <= 'b0;
             reg_flash_ce <= 'b0;
 			if (cnt >= 1000) begin
 				cnt <= 0;
@@ -245,6 +245,7 @@ begin
 						current_addr <= 16'b0;
 						ram_load_addr <= 16'b0;
 						flash_finished_tmp <= 'b1;
+                        reg_ready <= 'b1;
                 end
             end
 
