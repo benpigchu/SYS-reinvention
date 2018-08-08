@@ -69,7 +69,7 @@ module memory(
     assign uart_rdn = reg_uart_rdn;
     assign uart_wrn = reg_uart_wrn;
     assign data_out = reg_data_out;
-    assign sram_data = ((!sram_ce_n && (!sram_we_n)) || ((!reg_uart_wrn) && sram_ce_n)) ? reg_data : 32'bz;
+	assign sram_data = (((!sram_ce_n) && (!sram_we_n)) || ((!reg_uart_wrn) && sram_ce_n)) ? reg_data : 32'bz;
     assign sram_addr = reg_addr;
     assign ram_ready = reg_ready;
 
