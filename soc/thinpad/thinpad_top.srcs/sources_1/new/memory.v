@@ -69,7 +69,7 @@ module memory(
     assign uart_rdn = reg_uart_rdn;
     assign uart_wrn = reg_uart_wrn;
     assign data_out = reg_data_out;
-    assign sram_data = (((!sram_ce_n) && (!sram_we_n)) || ((!reg_uart_wrn) && sram_ce_n)) ? reg_data : 32'bz;
+    assign sram_data = ((!sram_ce_n && (!sram_we_n)) || (sram_ce_n) && (!uart_wrn)) ? reg_data : 32'bz;
     assign sram_addr = reg_addr;
     assign ram_ready = reg_ready;
 
@@ -84,7 +84,6 @@ module memory(
 	assign flash_rp = reg_flash_rp;
 	assign flash_ce = reg_flash_ce; 
     
-    integer uart_count = 0;
 
 
     reg[2:0] state = 'b000;
@@ -131,6 +130,7 @@ begin
                 'b001: begin
                     if (addr_in == uart_addr) begin
                         reg_ram_ce <= 'b1;
+                        reg_ram_be <= 'b0000;
                         if (mem_read) begin
                             reg_uart_rdn <= 'b0;
                         end
@@ -138,12 +138,10 @@ begin
                             reg_data[31:8] <= 24'b0;
                             reg_uart_wrn <= 'b0;
                         end
-                        state <= 'b011;
                     end
                     else if (addr_in == check_addr) begin
                         reg_data_out[0] <= uart_tsre & uart_tbre;
                         reg_data_out[4] <= uart_dataready;
-                        state <= 'b010;
                     end
                     else begin        
                         if (mem_read) begin
@@ -152,9 +150,8 @@ begin
                         else if (mem_write) begin
                             reg_ram_we <= 'b0;
                         end
-                        state <= 'b010;
                     end
-                    
+                    state <= 'b010;
                 end
                 'b010: begin
                     reg_ram_ce <= 'b1;
@@ -170,15 +167,6 @@ begin
                         reg_data_out <= sram_data;
                     end
                     state <= 'b000;
-                end
-                'b011: begin
-                    uart_count <= uart_count + 1;
-                    if (uart_count == 20)begin
-                        state <= 'b010;
-                    end
-                    else begin
-                        state <= 'b011;
-                    end
                 end
                 default: 
                     state <= 'b000;
