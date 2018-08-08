@@ -171,6 +171,7 @@ begin
             endcase
         end
         else begin
+            reg_ready <= 'b0;
             reg_flash_ce <= 'b0;
 			if (cnt >= 1000) begin
 				cnt <= 0;
